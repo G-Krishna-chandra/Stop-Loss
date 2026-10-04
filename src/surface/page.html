@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StopLoss</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --card: #ffffff; --ink: #1b1b18; --muted: #6b6a63; --line: #e4e2da;
+    --red: #c2410c; --red-bg: #fdeee5; --green: #15803d; --green-bg: #e7f5ec;
+    --amber: #a16207; --amber-bg: #fdf5dc; --blue: #1d4ed8; --blue-bg: #e8eefc;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141413; --card: #1e1e1c; --ink: #f1efe8; --muted: #a09e95; --line: #2f2e2a;
+      --red: #fb923c; --red-bg: #3a2216; --green: #4ade80; --green-bg: #15301f;
+      --amber: #facc15; --amber-bg: #34290e; --blue: #93b4ff; --blue-bg: #1b2541;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 60px; }
+  header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+  h1 { margin: 0; font-size: 26px; letter-spacing: -0.02em; }
+  .tag { color: var(--muted); margin-top: 4px; }
+  .addr { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--card); border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px 10px; font-size: 13px; }
+  .exposure { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 22px; margin-bottom: 20px;
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 20px; }
+  .exposure .num { font-size: 44px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; transition: color .3s; }
+  .exposure .label { color: var(--muted); }
+  .exposure .zero { color: var(--green); }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 26px 0 10px; }
+  .approval { background: var(--amber-bg); border: 1px solid var(--amber); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+  .approval .q { font-weight: 600; }
+  .approval .kind { font-size: 12px; color: var(--amber); text-transform: uppercase; letter-spacing: .06em; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .card .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .card .name { font-weight: 650; font-size: 16px; }
+  .card .meta { color: var(--muted); font-size: 13px; }
+  .price { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .pill { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .s-open { background: var(--blue-bg); color: var(--blue); }
+  .s-stop_pending { background: var(--amber-bg); color: var(--amber); }
+  .s-approved, .s-cancelling { background: var(--red-bg); color: var(--red); }
+  .s-closed { background: var(--green-bg); color: var(--green); }
+  .s-kept, .s-failed { background: var(--line); color: var(--muted); }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; }
+  button { font: inherit; font-size: 13px; border-radius: 8px; padding: 6px 12px; cursor: pointer; border: 1px solid var(--line);
+    background: var(--card); color: var(--ink); }
+  button:hover { border-color: var(--muted); }
+  button.go { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; }
+  button.ok { background: var(--green); border-color: var(--green); color: #fff; font-weight: 600; }
+  button:disabled { opacity: .5; cursor: default; }
+  a { color: var(--blue); }
+  .live { background: var(--card); border: 1px solid var(--red); border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
+  .live .bar { padding: 8px 12px; display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+  .live .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--red); margin-right: 6px; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  .live iframe { width: 100%; aspect-ratio: 16 / 10; border: 0; display: block; background: #000; }
+  details { font-size: 13px; }
+  summary { cursor: pointer; color: var(--muted); }
+  .ev { display: grid; grid-template-columns: 64px 130px 1fr; gap: 6px; padding: 3px 0; border-top: 1px solid var(--line); }
+  .ev .t { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .ev .d { color: var(--muted); overflow-wrap: anywhere; }
+  .empty { color: var(--muted); padding: 14px 0; }
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg);
+    padding: 8px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.on { opacity: 1; }
+  .token { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .token input { font: inherit; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); width: min(420px, 100%); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>StopLoss</h1>
+      <div class="tag">Every free trial gets a stop-loss.</div>
+    </div>
+    <div>Sign up with <span class="addr" id="addr">…</span></div>
+  </header>
+
+  <div id="needToken" class="token" hidden>
+    <p>Paste the admin token (it's <code>ADMIN_TOKEN</code> in <code>.env</code>, or open the link the server prints).</p>
+    <input id="tokenInput" type="password" placeholder="ADMIN_TOKEN"> <button id="saveToken">Save</button>
+  </div>
+
+  <div id="app" hidden>
+    <div class="exposure">
+      <span class="num" id="exposure">$0.00</span>
+      <span class="label">at risk across open trials</span>
+    </div>
+
+    <div id="lives"></div>
+
+    <h2>Waiting for you</h2>
+    <div id="approvals"></div>
+
+    <h2>Positions</h2>
+    <div class="row" style="margin-bottom:10px">
+      <button id="stopCheck" title="Arm stops for any trial renewing within the lead time">Run stop check</button>
+    </div>
+    <div id="positions" class="grid"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const fromHash = new URLSearchParams(location.hash.slice(1)).get('token');
+  let token = null;
+  try {
+    if (fromHash) { localStorage.setItem('stoploss_token', fromHash); history.replaceState(null, '', location.pathname); }
+    token = localStorage.getItem('stoploss_token');
+  } catch { token = fromHash; }
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const money = (cents, cur) => cents == null ? '—' : new Intl.NumberFormat('en-US', { style: 'currency', currency: cur || 'USD' }).format(cents / 100);
+  const day = (d) => d ? new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'unknown';
+  const time = (d) => new Date(d).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const STATUS = { open: 'Tracking', stop_pending: 'Needs approval', approved: 'Approved', cancelling: 'Cancelling', closed: 'Closed', kept: 'Kept', failed: 'Failed' };
+
+  function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); setTimeout(() => t.classList.remove('on'), 2200); }
+
+  async function api(path, body) {
+    const res = await fetch('/api' + path, {
+      method: body ? 'POST' : 'GET',
+      headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (res.status === 401) { showToken(); throw new Error('unauthorized'); }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    return data;
+  }
+
+  function showToken() { $('needToken').hidden = false; $('app').hidden = true; }
+  $('saveToken').onclick = () => {
+    token = $('tokenInput').value.trim();
+    try { localStorage.setItem('stoploss_token', token); } catch {}
+    $('needToken').hidden = true; refresh();
+  };
+
+  const openDetails = new Set();
+  const eventsCache = {};
+  let shownLive = {};
+
+  async function refresh() {
+    let s;
+    try { s = await api('/state'); } catch { return; }
+    $('app').hidden = false; $('needToken').hidden = true;
+    $('addr').textContent = s.inbox;
+
+    const total = s.exposure.reduce((a, e) => a + e.cents, 0);
+    const cur = s.exposure[0]?.currency || 'USD';
+    $('exposure').textContent = money(total, cur);
+    $('exposure').classList.toggle('zero', total === 0);
+
+    // Live views: keep iframes stable across refreshes so they don't reload.
+    const lives = s.live_views || {};
+    const byId = Object.fromEntries(s.positions.map((p) => [p.id, p]));
+    for (const id of Object.keys(shownLive)) if (!lives[id]) { document.getElementById('live-' + id)?.remove(); delete shownLive[id]; }
+    for (const [id, url] of Object.entries(lives)) {
+      if (shownLive[id] === url) continue;
+      document.getElementById('live-' + id)?.remove();
+      const div = document.createElement('div');
+      div.className = 'live'; div.id = 'live-' + id;
+      div.innerHTML = '<div class="bar"><span><span class="dot"></span>Agent is cancelling <b>' + esc(byId[id]?.service_name) +
+        '</b> in your account</span><a href="' + esc(url) + '" target="_blank" rel="noopener">Open live view</a></div>' +
+        '<iframe src="' + esc(url) + '" allow="clipboard-read; clipboard-write"></iframe>';
+      $('lives').appendChild(div);
+      shownLive[id] = url;
+    }
+
+    $('approvals').innerHTML = s.approvals.length ? s.approvals.map((a) => {
+      const p = byId[a.position_id];
+      return '<div class="approval"><div><div class="kind">' + (a.kind === 'retention_offer' ? 'Retention offer' : 'Stop reached') +
+        '</div><div class="q">' + esc(a.detail) + '</div>' + (p ? '<div class="meta">' + esc(p.service_domain) + '</div>' : '') +
+        '</div><div class="row"><button class="go" data-approve="' + a.id + '">' + (a.kind === 'retention_offer' ? 'Cancel anyway' : 'Approve cancel') +
+        '</button><button data-decline="' + a.id + '">Keep it</button></div></div>';
+    }).join('') : '<div class="empty">Nothing needs you right now.</div>';
+
+    $('positions').innerHTML = s.positions.length ? s.positions.map((p) => {
+      const canFf = p.status === 'open';
+      const canReopen = p.status === 'kept' || p.status === 'failed';
+      return '<div class="card"><div class="top"><span class="name">' + esc(p.service_name) + '</span><span class="pill s-' + p.status + '">' +
+        (STATUS[p.status] || p.status) + '</span></div>' +
+        '<div class="meta">' + esc(p.service_domain) + ' · opened ' + day(p.opened_at) + '</div>' +
+        '<div>Renews <b>' + day(p.renewal_date) + '</b> for <span class="price">' + money(p.renewal_price_cents, p.currency) + '</span></div>' +
+        '<div class="row">' + (canFf ? '<button data-ff="' + p.id + '" title="Demo: move renewal to tomorrow and run the stop check">Fast-forward to renewal</button>' : '') +
+        (canReopen ? '<button data-reopen="' + p.id + '" title="Demo: put it back to tracking">Reopen</button>' : '') +
+        (p.cancel_url ? '<a href="' + esc(p.cancel_url) + '" target="_blank" rel="noopener" style="font-size:13px;align-self:center">cancel page</a>' : '') +
+        '</div><details data-events="' + p.id + '"' + (openDetails.has(p.id) ? ' open' : '') + '><summary>Timeline</summary><div id="ev-' + p.id + '">' +
+        (eventsCache[p.id] || 'Loading…') + '</div></details></div>';
+    }).join('') : '<div class="empty">No trials yet. Sign up for one with the address above.</div>';
+
+    for (const id of openDetails) loadEvents(id);
+  }
+
+  async function loadEvents(id) {
+    try {
+      const evs = await api('/positions/' + id + '/events');
+      const html = evs.map((e) => {
+        const p = e.payload || {};
+        const d = p.detail || p.reason || p.subject || p.decision || p.note || (p.trial_days ? p.trial_days + '-day trial' : '') || '';
+        const links = [p.live_view_url && '<a target="_blank" rel="noopener" href="' + esc(p.live_view_url) + '">live</a>',
+          p.replay_url && '<a target="_blank" rel="noopener" href="' + esc(p.replay_url) + '">replay</a>'].filter(Boolean).join(' ');
+        return '<div class="ev"><span class="t">' + time(e.created_at) + '</span><span>' + esc(e.type.replace(/_/g, ' ')) +
+          '</span><span class="d">' + esc(String(d).slice(0, 220)) + ' ' + links + '</span></div>';
+      }).join('') || '<div class="empty">No events.</div>';
+      eventsCache[id] = html;
+      const el = document.getElementById('ev-' + id);
+      if (el) el.innerHTML = html;
+    } catch {}
+  }
+
+  document.addEventListener('toggle', (e) => {
+    const id = e.target?.dataset?.events;
+    if (!id) return;
+    if (e.target.open) { openDetails.add(id); loadEvents(id); } else openDetails.delete(id);
+  }, true);
+
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('button');
+    if (!b || b.disabled) return;
+    const d = b.dataset;
+    try {
+      if (d.approve) { b.disabled = true; await api('/approvals/' + d.approve, { decision: 'approved' }); toast('Approved. The agent is opening your account…'); }
+      else if (d.decline) { b.disabled = true; await api('/approvals/' + d.decline, { decision: 'declined' }); toast('Kept. Nothing will be cancelled.'); }
+      else if (d.ff) { b.disabled = true; await api('/positions/' + d.ff + '/fast-forward', {}); toast('Renewal moved to tomorrow. Stop armed.'); }
+      else if (d.reopen) { await api('/positions/' + d.reopen + '/reopen', {}); toast('Reopened.'); }
+      else if (b.id === 'stopCheck') { await api('/stop-check', {}); toast('Stop check ran.'); }
+      else return;
+    } catch (err) { toast(err.message); }
+    refresh();
+  });
+
+  if (!token) showToken(); else refresh();
+  setInterval(() => { if (token) refresh(); }, 3000);
+})();
+</script>
+</body>
+</html>

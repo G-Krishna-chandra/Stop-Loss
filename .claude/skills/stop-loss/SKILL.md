@@ -45,7 +45,7 @@ Any surface the team picks later calls `resolveApproval`. Nothing else in the co
 
 For development and testing, resolve approvals with a CLI script or a plain HTTP endpoint.
 
-Decision: not made yet. Replace this line when the team decides.
+Decision (Oct 4, 3:05 PM): a small web page served by the StopLoss server at `/` (`src/surface/`). It shows exposure, positions, pending approvals with Approve / Keep, the Kernel live view while a cancel runs, and a per-position timeline. Its JSON lives under `/api/*` behind the `ADMIN_TOKEN` bearer; open `http://localhost:3000/#token=<ADMIN_TOKEN>` (the server prints this link). Approvals still go only through `resolveApproval`. The CLI remains for development.
 
 ## 4. Deadlines (Pacific time, October 4, 2026)
 
