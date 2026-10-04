@@ -13,6 +13,7 @@ const base = {
     thread_id: "thr_1",
     message_id: "msg_1",
     from_: "Notion <team@mail.notion.so>",
+    to: ["Me <me@agentmail.to>"],
     subject: "Welcome to Notion",
     text: "Hello",
     timestamp: "2026-10-04T18:00:00Z",
@@ -25,7 +26,16 @@ describe("parseMessageReceived", () => {
     expect(email.messageId).toBe("msg_1");
     expect(email.fromAddress).toBe("team@mail.notion.so");
     expect(email.senderDomain).toBe("notion.so");
+    expect(email.recipientAddress).toBe("me@agentmail.to");
     expect(email.bodyOmitted).toBe(false);
+  });
+
+  it("has a null recipient when `to` is absent or junk", () => {
+    const { to, ...rest } = base.message;
+    expect(parseMessageReceived({ ...base, message: rest }).recipientAddress).toBeNull();
+    expect(
+      parseMessageReceived({ ...base, message: { ...rest, to: [42, "nope"] } }).recipientAddress,
+    ).toBeNull();
   });
 
   it("accepts `from` as well as `from_`", () => {

@@ -30,6 +30,7 @@ const received = (subject: string, messageId = "msg_1") => ({
     thread_id: "thr_1",
     message_id: messageId,
     from_: "Notion <team@mail.notion.so>",
+    to: ["me@agentmail.to"],
     subject,
     text: "body",
     timestamp: "2026-10-04T18:00:00Z",
@@ -59,6 +60,7 @@ describe("inbox handler", () => {
     expect(event.type).toBe("email.welcome");
     expect(event.dedupe_key).toBe("agentmail:msg_1");
     expect(event.payload.sender_domain).toBe("notion.so");
+    expect(event.payload.recipient_address).toBe("me@agentmail.to");
     expect(event.payload).not.toHaveProperty("text");
   });
 

@@ -19,6 +19,8 @@ export interface InboundEmail {
   threadId: string | null;
   inboxId: string | null;
   fromAddress: string | null;
+  /** First address in the message's `to` list: the StopLoss address the trial was signed up with. */
+  recipientAddress: string | null;
   /** Registrable domain of the sender, e.g. "notion.so" for "mail.notion.so". */
   senderDomain: string | null;
   /** Sanitized and truncated. Untrusted text. */
@@ -43,6 +45,8 @@ export interface InboxEventPayload {
   thread_id: string | null;
   inbox_id: string | null;
   sender_address: string | null;
+  /** The StopLoss address that received the email. Null if the payload has no `to`. */
+  recipient_address: string | null;
   sender_domain: string | null;
   /** Untrusted. Truncated, control characters stripped, digit runs redacted for login codes. */
   subject: string;

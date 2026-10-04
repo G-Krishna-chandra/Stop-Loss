@@ -18,6 +18,7 @@ const body = JSON.stringify({
     thread_id: `thr_${Date.now()}`,
     message_id: `msg_${Date.now()}`,
     from_: "Notion <team@mail.notion.so>",
+    to: ["dev@agentmail.to"],
     subject,
     text: "Hello from the fake sender.",
     timestamp: new Date().toISOString(),

@@ -86,6 +86,7 @@ export function createInboxHandler(deps: InboxHandlerDeps) {
         thread_id: email.threadId,
         inbox_id: email.inboxId,
         sender_address: email.fromAddress,
+        recipient_address: email.recipientAddress,
         sender_domain: email.senderDomain,
         subject: redactForKind(kind, email.subject),
         received_at: email.receivedAt,

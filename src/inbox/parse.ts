@@ -41,6 +41,17 @@ export function eventTypeOf(payload: unknown): string | null {
   return str(payload["event_type"]) ?? str(payload["type"]);
 }
 
+/** `to` is a list of addresses in AgentMail's message object. Accepts a bare string too. */
+function firstRecipient(value: unknown): string | null {
+  const candidates = Array.isArray(value) ? value : [value];
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    const address = extractAddress(candidate);
+    if (address) return address;
+  }
+  return null;
+}
+
 export function parseMessageReceived(payload: unknown): InboundEmail {
   if (!isObject(payload)) throw new MalformedPayloadError("payload is not an object");
   const message = payload["message"];
@@ -64,6 +75,7 @@ export function parseMessageReceived(payload: unknown): InboundEmail {
     threadId: str(message["thread_id"]),
     inboxId: str(message["inbox_id"]),
     fromAddress,
+    recipientAddress: firstRecipient(message["to"]),
     senderDomain: fromAddress ? domainOfAddress(fromAddress) : null,
     subject: sanitizeText(rawSubject, MAX_SUBJECT_CHARS),
     textPreview: sanitizeText(rawText, MAX_PREVIEW_CHARS),
