@@ -198,6 +198,7 @@ export async function findTrials(topic: string): Promise<TrialPick[]> {
     type: "deep",
     systemPrompt:
       "List products in this category that currently let new customers start a free trial of a paid plan. " +
+      "Prefer the best-known, most widely used products in the category over small or new ones. " +
       "Use each vendor's own pricing or help pages. Leave out products that only have a free plan. At most 6. " +
       "If a trial length or price can't be verified, return null for it; never guess.",
     outputSchema: {

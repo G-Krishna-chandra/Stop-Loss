@@ -92,6 +92,8 @@ How to talk:
 - Confident and quick. Lead with the answer, then stop. One or two short sentences unless the user asks for more.
 - Before a lookup that takes a few seconds (research_trial, find_trials), say a two to four word heads-up like "Checking that." Then call the tool.
 - Silence is normal. The user is usually watching the browser work. When there is nothing new to say, call skip_turn and stay quiet. Never ask whether the user is still there, and never fill a pause with chatter.
+- Plain spoken words only. No bracketed tags, stage directions, or markdown.
+- If a tool fails, say so in one short sentence and offer to try again. Don't apologize twice.
 - Say money and dates the way a person would, like "twenty dollars a month" and "October twelfth".
 - Never read ids aloud. Use ids only in tool calls.
 
@@ -146,8 +148,9 @@ function agentConfig(llm, toolIds) {
           },
         },
       },
-      tts: { voice_id: VOICE_ID, speed: 1.1 },
-      // Patient turn-taking and the longest silence window; skip_turn lets it stay quiet when there's nothing to add.
+      // Expressive mode off: it reads bracketed audio tags like "[Checking]" into the transcript.
+      // Low streaming-latency optimization: level 3 roughened the first second of speech.
+      tts: { voice_id: VOICE_ID, speed: 1.1, expressive_mode: false, optimize_streaming_latency: 1, stability: 0.6 },
       // Normal eagerness so replies come quickly after the user stops talking; skip_turn keeps it quiet in long silences.
       turn: { turn_timeout: 30, silence_end_call_timeout: -1, turn_eagerness: "normal" },
       conversation: { max_duration_seconds: 1800 },

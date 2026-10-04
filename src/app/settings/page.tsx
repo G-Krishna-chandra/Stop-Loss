@@ -15,7 +15,7 @@ export default async function SettingsPage() {
   return (
     <>
       <PageHeader eyebrow="Setup" title="Settings" subtitle="Your StopLoss address, virtual cards, stop timing, and the services StopLoss uses." />
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid items-start gap-6 xl:grid-cols-2">
         <Card className="p-6">
           <CardTitle>StopLoss address</CardTitle>
           {address ? (

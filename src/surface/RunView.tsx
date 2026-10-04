@@ -162,7 +162,8 @@ export function RunView({ initial }: { initial: AgentRun }) {
               ) : null}
             </div>
           </div>
-          <div className="overflow-hidden rounded-xl border border-line bg-brand-soft">
+          {/* Keeps the 16:10 browser within one screen height on wide displays. */}
+          <div className="mx-auto w-full max-w-[max(560px,calc((100dvh-26rem)*1.6))] overflow-hidden rounded-xl border border-line bg-brand-soft">
             <div className="flex items-center gap-3 border-b border-line bg-neutral-50 px-4 py-3">
               <span className="flex gap-2" aria-hidden="true">
                 <span className="h-3 w-3 rounded-full bg-red-400" />

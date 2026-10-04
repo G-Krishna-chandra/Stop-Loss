@@ -8,6 +8,7 @@
 /* Neutral black-and-white system: near-white canvas, white cards with hairline borders and soft shadows,
    near-black for text and primary actions. Status colors stay semantic but soft. */
 @theme {
+  --breakpoint-3xl: 2200px;
   --color-brand: #111111;
   --color-brand-dark: #000000;
   --color-brand-soft: #f2f2f1;

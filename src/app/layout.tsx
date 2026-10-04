@@ -30,7 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <div className="flex min-w-0 flex-1 flex-col">
             <TopBar />
             <MobileNav />
-            <main className="mx-auto w-full max-w-[1800px] flex-1 px-5 py-7 md:px-10 md:py-8 2xl:px-14">{children}</main>
+            <main className="mx-auto w-full max-w-[2400px] flex-1 px-5 py-6 md:px-10 md:py-7 2xl:px-14">{children}</main>
           </div>
         </div>
         </VoiceProvider>
