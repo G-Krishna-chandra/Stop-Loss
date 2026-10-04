@@ -68,6 +68,12 @@ const TOOLS = [
     parameters: { type: "object", properties: { product: str("The product's name or website, like ChatGPT or notion.so") }, required: ["product"] },
   },
   {
+    name: "find_trials",
+    description:
+      "Find several products in a category that offer a free trial of a paid plan right now, like 'AI tools' or 'AI coding assistants'. Returns up to six with website, trial length, plan, and price. Use it for any question about which products have trials.",
+    parameters: { type: "object", properties: { topic: str("The category, like AI tools or design apps") }, required: ["topic"] },
+  },
+  {
     name: "start_signup",
     description:
       "Have StopLoss sign up for a product's free trial in a live browser with the user's StopLoss email and a single-use card. Pass the product name; StopLoss finds the website. Only after the user said yes to starting it.",
@@ -83,7 +89,8 @@ const TOOLS = [
 const PROMPT = `You are StopLoss, the voice assistant inside the StopLoss web app. StopLoss tracks free trials (called positions), finds each trial's renewal date and price, and cancels it in a live browser before the first charge, only with the user's approval. It can also sign up for a product's free trial in a live browser using the user's StopLoss email.
 
 How to talk:
-- Short, plain sentences. One or two per turn unless the user asks for detail.
+- Confident and quick. Lead with the answer, then stop. One or two short sentences unless the user asks for more.
+- Before a lookup that takes a few seconds (research_trial, find_trials), say a two to four word heads-up like "Checking that." Then call the tool.
 - Silence is normal. The user is usually watching the browser work. When there is nothing new to say, call skip_turn and stay quiet. Never ask whether the user is still there, and never fill a pause with chatter.
 - Say money and dates the way a person would, like "twenty dollars a month" and "October twelfth".
 - Never read ids aloud. Use ids only in tool calls.
@@ -97,6 +104,8 @@ Actions:
 - open_page, open_run, open_position move the user's screen when they ask to see something.
 - When the user names a product ("sign up for ChatGPT"), do not ask for a URL. Call research_trial, tell them the trial in one sentence (for example "ChatGPT has a four-day trial of Plus, then twenty dollars a month. Start it?"), and after a yes call start_signup with the product name.
 - If research_trial finds no free trial, say so and only sign up if the user still wants to.
+- For questions about several products or a whole category ("which AI companies have a free trial?"), use find_trials. You can also call research_trial as many times as you need. Never say you can only look up one product at a time.
+- When listing trials, name the top three or four with their trial length, then offer to start one.
 - continue_run: when a run is paused and the user says they finished signing in or entering a card.
 - Cancelling needs an explicit yes, every time:
   - For a waiting approval, say the service, the price, and when it renews, then ask "Cancel it?". Call answer_approval with decision "approve" only after a clear yes. A clear no or "keep it" is decision "decline". If the answer is unclear, ask again. Never decide for the user.
@@ -104,8 +113,9 @@ Actions:
 - If a run is paused waiting for the user, tell them what to do: take over the browser, sign in or enter the card, then say "continue".
 - If the user asks for something StopLoss can't do, say so plainly.`;
 
-const FIRST_MESSAGE = "Hi, it's StopLoss. I can tell you what's renewing, what the browser agent is doing, or start a sign-up. What do you need?";
-const VOICE_ID = process.env.ELEVENLABS_VOICE_ID || "cjVigY5qzO86Huf0OWal";
+const FIRST_MESSAGE = "Hey, StopLoss here. What do you need?";
+// Liam: confident and energetic (premade). Override with ELEVENLABS_VOICE_ID.
+const VOICE_ID = process.env.ELEVENLABS_VOICE_ID || "TX3LPaxmHKxFdv7VOQHJ";
 
 async function pickLlm() {
   const preferred = ["gemini-2.5-flash", "claude-sonnet-4-5", "gpt-5.2", "gpt-4.1"];
@@ -136,9 +146,10 @@ function agentConfig(llm, toolIds) {
           },
         },
       },
-      tts: { voice_id: VOICE_ID },
+      tts: { voice_id: VOICE_ID, speed: 1.1 },
       // Patient turn-taking and the longest silence window; skip_turn lets it stay quiet when there's nothing to add.
-      turn: { turn_timeout: 30, silence_end_call_timeout: -1, turn_eagerness: "patient" },
+      // Normal eagerness so replies come quickly after the user stops talking; skip_turn keeps it quiet in long silences.
+      turn: { turn_timeout: 30, silence_end_call_timeout: -1, turn_eagerness: "normal" },
       conversation: { max_duration_seconds: 1800 },
     },
     platform_settings: { auth: { enable_auth: true } },

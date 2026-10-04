@@ -78,7 +78,7 @@ export default async function PositionPage({ params, searchParams }: PageProps<"
   const trace = events.map((e) => ({ id: e.id, title: e.title, detail: e.detail, at: e.created_at }));
 
   return (
-    <div className="max-w-[1180px]">
+    <div className="w-full">
       <Link href="/positions" className="inline-flex items-center gap-2 text-[16px] text-muted hover:text-ink">
         <ArrowLeft className="h-5 w-5" aria-hidden="true" />
         Back to positions

@@ -32,7 +32,7 @@ const EXAMPLES = [
 
 export function HeroArt({ email }: { email: string | null }) {
   return (
-    <div className="relative hidden h-[500px] select-none lg:block" aria-hidden="true">
+    <div className="relative h-[440px] w-[520px] max-w-full select-none" aria-hidden="true">
       <div className="absolute inset-0 -z-10 rounded-[40px] bg-[radial-gradient(60%_60%_at_60%_40%,#ffffff_0%,#f1f1ef_55%,transparent_100%)]" />
 
       {/* Signup form StopLoss fills in for you */}

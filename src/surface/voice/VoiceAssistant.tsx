@@ -166,6 +166,11 @@ function VoiceTools() {
     return JSON.stringify(await res.json().catch(() => ({ error: "lookup failed" })));
   });
 
+  useConversationClientTool("find_trials", async (p: Record<string, unknown>) => {
+    const res = await fetch(`/api/voice/trials?topic=${encodeURIComponent(String(p.topic))}`, { cache: "no-store" });
+    return JSON.stringify(await res.json().catch(() => ({ error: "lookup failed" })));
+  });
+
   useConversationClientTool("start_signup", async (p: Record<string, unknown>) => {
     const { ok, data } = await post("/api/signup", { url: String(p.website ?? p.product) });
     if (!ok) return `That didn't go through: ${String(data.error ?? "unknown error")}`;

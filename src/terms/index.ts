@@ -187,6 +187,54 @@ export async function findOfficialSite(product: string): Promise<{ name: string;
   return best ? { name: product, url: `${best.protocol}//${best.hostname}` } : null;
 }
 
+export type TrialPick = { product: string; website: string | null; trial_days: number | null; plan: string | null; price_after_trial: string | null };
+
+// Several products in a category that offer a free trial of a paid plan right now ("AI coding tools").
+// Exa deep search with a list schema; the build-with-exa skill puts keep/drop rules in systemPrompt.
+export async function findTrials(topic: string): Promise<TrialPick[]> {
+  if (!process.env.EXA_API_KEY) return [];
+  const exa = new Exa(process.env.EXA_API_KEY);
+  const res = await exa.search(`${topic} that offer a free trial of a paid plan`, {
+    type: "deep",
+    systemPrompt:
+      "List products in this category that currently let new customers start a free trial of a paid plan. " +
+      "Use each vendor's own pricing or help pages. Leave out products that only have a free plan. At most 6. " +
+      "If a trial length or price can't be verified, return null for it; never guess.",
+    outputSchema: {
+      type: "object",
+      properties: {
+        trials: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              product: { type: "string", description: "Product name" },
+              website: { type: "string", description: "Official website URL" },
+              trial_days: { type: "number", description: "Length of the free trial in days" },
+              plan: { type: "string", description: "Paid plan the trial is for" },
+              price_after_trial: { type: "string", description: "Price after the trial, like $20/month" },
+            },
+          },
+        },
+      },
+      required: ["trials"],
+    },
+    contents: { highlights: true },
+  });
+  const raw = res.output?.content;
+  const content = (typeof raw === "string" ? JSON.parse(raw) : raw) as { trials?: Record<string, unknown>[] } | undefined;
+  return (content?.trials ?? [])
+    .map((t) => ({
+      product: str(t.product) ?? "",
+      website: url(t.website),
+      trial_days: num(t.trial_days),
+      plan: str(t.plan),
+      price_after_trial: str(t.price_after_trial),
+    }))
+    .filter((t) => t.product)
+    .slice(0, 6);
+}
+
 // Exa only: what a new customer would get. Used before an agent sign-up, when there is no email yet.
 export async function lookupWebTerms(service_name: string, service_domain: string): Promise<Terms> {
   return lookupTerms({ service_name, service_domain });
