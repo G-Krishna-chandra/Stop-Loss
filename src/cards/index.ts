@@ -64,8 +64,9 @@ export async function getCardStatus(): Promise<CardStatus> {
     if (!wallet) return { provider: "link", state: "not_connected", detail: null, action_url: null };
     const status = (wallet.state as { status: string }).status;
     if (status === "connected") return { provider: "link", state: "connected", detail: null, action_url: null };
-    if (status === "pending_authorization") {
-      return { provider: "link", state: "connecting", detail: "Finish connecting Link.", action_url: actionUrl(wallet) };
+    // Waiting on the user's Link sign-in. The hosted link expires after 10 minutes; the connect route issues a fresh one.
+    if (status === "pending_authorization" || (status === "reconnect_required" && wallet.action?.name === "link_oauth")) {
+      return { provider: "link", state: "connecting", detail: "Sign in to Link to finish connecting.", action_url: null };
     }
     const reason = (wallet.state as { status_reason?: string }).status_reason;
     return {
@@ -79,18 +80,17 @@ export async function getCardStatus(): Promise<CardStatus> {
   }
 }
 
-// Creates the Link wallet if needed and returns the hosted Link page the user must open, or null when connected.
+// Returns a fresh hosted Link sign-in page for the user, or null when the wallet is already connected.
+// Upserting the wallet starts a new authorization, so an expired link is never reused.
 export async function connectWallet(): Promise<string | null> {
   const vault = await vaultId();
-  let wallet = await findWallet(vault);
-  if (!wallet) {
-    wallet = (await kernel().vaults.items.upsert(WALLET_KEY, {
-      id_or_name: vault,
-      type: "wallet",
-      spec: { provider: "link", authorization: { method: "oauth", client: { type: "kernel_managed" } } },
-    })) as WalletItem;
-  }
-  if ((wallet.state as { status: string }).status === "connected") return null;
+  const existing = await findWallet(vault);
+  if (existing && (existing.state as { status: string }).status === "connected") return null;
+  const wallet = (await kernel().vaults.items.upsert(existing?.key ?? WALLET_KEY, {
+    id_or_name: vault,
+    type: "wallet",
+    spec: { provider: "link", authorization: { method: "oauth", client: { type: "kernel_managed" } } },
+  })) as WalletItem;
   return actionUrl(wallet);
 }
 

@@ -42,8 +42,9 @@ export default async function SettingsPage() {
                   <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                   Single-use cards are on
                 </span>
-              ) : card?.state === "connecting" && card.action_url ? (
-                <a href={card.action_url} target="_blank" rel="noreferrer" className={buttonClass.primary}>
+              ) : card?.state === "connecting" ? (
+                // Always through the connect route: Link sign-in links expire after 10 minutes, so each click gets a fresh one.
+                <a href="/api/cards/connect" className={buttonClass.primary}>
                   Finish connecting
                 </a>
               ) : card?.state === "not_connected" || card?.state === "error" ? (
