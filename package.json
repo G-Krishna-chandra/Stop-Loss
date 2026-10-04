@@ -11,9 +11,11 @@
     "db:migrate": "node --env-file-if-exists=.env.local scripts/migrate.mjs",
     "approve": "node --env-file-if-exists=.env.local scripts/approve.mjs",
     "inbox:listen": "node --env-file-if-exists=.env.local scripts/listen.mjs",
-    "stop:now": "node --env-file-if-exists=.env.local scripts/stop-now.mjs"
+    "stop:now": "node --env-file-if-exists=.env.local scripts/stop-now.mjs",
+    "voice:setup": "node --env-file-if-exists=.env.local scripts/voice-agent.mjs"
   },
   "dependencies": {
+    "@elevenlabs/react": "^1.16.0",
     "@neon/ai-sdk-provider": "^1.0.0",
     "@neondatabase/serverless": "^1.2.0",
     "@onkernel/sdk": "^0.119.0",
