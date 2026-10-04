@@ -22,13 +22,23 @@ In scope: ONE end-to-end loop that works on real accounts.
 - e. On approval, the agent cancels inside the logged-in account. Several positions can cancel in parallel.
 - f. The cancellation email arrives in the agent inbox and closes the position.
 
-Out of scope today: importing existing subscriptions, bank linking, multi-user accounts, and virtual cards. Virtual cards are a stretch goal only, after the loop works.
+Out of scope today: importing existing subscriptions, bank linking, and multi-user accounts. Agent sign-up with a per-trial virtual card comes after the loop works, and depends on a card source the team has not picked yet.
 
 Target services for the live cancel: TBD by 1:00 PM. Pick two or three services, test all of them, and ideally pick services on the same billing portal.
 
-## 3. OPEN DECISION: how the user interacts with the agent
+## 3. DECIDED: how the user interacts with the agent
 
-This is NOT decided. Do not assume a web dashboard, chat, email reply, SMS, or voice. Do not build a user-facing surface until the team writes the decision into this section.
+Decided by Krishna on October 4, 2026, from the mockups in `Design /` (the folder name ends with a space). The surface is a desktop web app built with Next.js in this repo. Build to those images.
+
+- Navigation: a dark sidebar with Home, Positions, Inbox, Activity, Settings.
+- Home: your StopLoss email with a Copy button, the four-step explainer, and the per-trial virtual card.
+- Positions: stat cards (current exposure, active trials, action needed, avoided so far) over a table of positions with a status pill and a Review or View action.
+- Position detail: Overview, Evidence, and Activity tabs, with trial details, upcoming renewal, source emails, and an activity trace.
+- Inbox: the real AgentMail inbox, read through our API, never from the browser. Each email shows what StopLoss extracted and what it did.
+- Approvals: a confirm dialog ("Cancel Cursor subscription?") and a voice prompt with "Yes, cancel it" and "Keep it" buttons. Voice uses the browser's speech APIs. A spoken yes must still map to one explicit `resolveApproval` call for one pending request.
+- Agent runs: cancel and sign-up screens show a step list next to the live Kernel browser.
+- Agent sign-up: the user can ask StopLoss to sign up for a trial. Kernel fills the form with the StopLoss address and a per-trial card, and the user confirms first.
+- Not chat-first. No marketplace or "find new tools" feature.
 
 What is decided:
 
@@ -41,11 +51,9 @@ How to build around the open part: approval goes through one interface in `src/a
 - `requestApproval(position)`: creates a pending ApprovalRequest and returns its id.
 - `resolveApproval(id, decision)`: records the decision and resumes the workflow.
 
-Any surface the team picks later calls `resolveApproval`. Nothing else in the codebase may know which surface exists.
+Every surface (dialog, voice, CLI, HTTP endpoint) calls `resolveApproval`. Only `src/app/` and `src/surface/` know about the web UI.
 
 For development and testing, resolve approvals with a CLI script or a plain HTTP endpoint.
-
-Decision: not made yet. Replace this line when the team decides.
 
 ## 4. Deadlines (Pacific time, October 4, 2026)
 
@@ -83,13 +91,14 @@ src/cancel/    Kernel cancel flow. Input: position. Output: CancelResult.
 src/agent/     Mastra agent and the stop workflow with the approval suspend.
 src/approval/  The approval interface from section 3. No UI code.
 src/db/        Neon schema and queries. The only module that touches SQL.
-src/surface/   Empty until the open decision is made.
+src/surface/   Web UI components for the screens in section 3.
+src/app/       Next.js routes and API handlers. The composition root: the only place that wires modules together.
 src/types.ts   Shared types.
 ```
 
 Change `src/types.ts` only in its own small PR, and tell the team.
 
-A module imports from `src/types.ts`, `src/db`, and `src/approval` only. No module imports another module's internals.
+A module imports from `src/types.ts`, `src/db`, and `src/approval` only. No module imports another module's internals. `src/app/` and `src/agent/` may call the other modules through their `index.ts` entry points.
 
 ## 7. Data model
 
