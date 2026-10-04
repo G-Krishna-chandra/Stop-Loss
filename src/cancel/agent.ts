@@ -6,7 +6,7 @@ import { z } from "zod";
 import { model } from "@/llm";
 import { run } from "./kernel";
 
-export type AgentOutcome = "done" | "retention_offer" | "needs_login" | "needs_card" | "failed";
+export type AgentOutcome = "done" | "retention_offer" | "needs_login" | "needs_card" | "no_trial" | "failed";
 
 export type AgentHooks = {
   onStep: (key: string, detail: string) => Promise<void>;
@@ -157,7 +157,7 @@ export async function runBrowserAgent(input: {
     finish: tool({
       description: "End the task with an outcome and a one-sentence explanation for the user.",
       inputSchema: z.object({
-        outcome: z.enum(["done", "retention_offer", "needs_login", "needs_card", "failed"]),
+        outcome: z.enum(["done", "retention_offer", "needs_login", "needs_card", "no_trial", "failed"]),
         detail: z.string().max(300),
       }),
       execute: async ({ outcome, detail }) => {

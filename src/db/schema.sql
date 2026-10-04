@@ -27,6 +27,10 @@ create table if not exists positions (
   updated_at timestamptz not null default now()
 );
 
+-- Whether the service has a free trial at all (false = free plan only, nothing renews), and when terms were read.
+alter table positions add column if not exists has_trial boolean;
+alter table positions add column if not exists terms_checked_at timestamptz;
+
 -- One live position per service. Closed, kept, and failed positions do not block a new one.
 create unique index if not exists positions_one_live_per_domain
   on positions (service_domain)
@@ -76,6 +80,10 @@ create table if not exists agent_runs (
 -- When the current attempt began. A Vercel function stops after maxDuration, so a run still "running" long after
 -- this is treated as interrupted and paused for the user to continue.
 alter table agent_runs add column if not exists invoked_at timestamptz not null default now();
+-- Runs are history: deleting a position keeps its runs and only clears the link.
+alter table agent_runs drop constraint if exists agent_runs_position_id_fkey;
+alter table agent_runs add constraint agent_runs_position_id_fkey
+  foreign key (position_id) references positions (id) on delete set null;
 
 -- Our record of each AgentMail message: how it was classified and what StopLoss did with it.
 -- Bodies stay in AgentMail and are fetched on demand.

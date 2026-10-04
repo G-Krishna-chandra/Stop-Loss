@@ -23,6 +23,8 @@ function toPosition(r: Row): Position {
     cancel_url: (r.cancel_url as string | null) ?? null,
     cancel_policy: (r.cancel_policy as string | null) ?? null,
     source_urls: (r.source_urls as string[] | null) ?? [],
+    has_trial: (r.has_trial as boolean | null) ?? null,
+    terms_checked_at: iso(r.terms_checked_at),
     status: r.status as PositionStatus,
     status_reason: (r.status_reason as string | null) ?? null,
     card_last4: (r.card_last4 as string | null) ?? null,
@@ -97,6 +99,8 @@ export async function applyTerms(id: string, terms: Terms): Promise<Position> {
       cancel_policy = coalesce(${terms.cancel_policy}, cancel_policy),
       cancel_url = coalesce(${terms.cancel_url}, cancel_url),
       source_urls = ${terms.source_urls},
+      has_trial = coalesce(${terms.has_trial}, has_trial),
+      terms_checked_at = now(),
       renewal_date = case
         when coalesce(${terms.trial_days}, trial_days) is null then renewal_date
         else opened_at + make_interval(days => coalesce(${terms.trial_days}, trial_days))
@@ -145,8 +149,9 @@ export async function dueStops(now = new Date()): Promise<Position[]> {
 export async function getStats(): Promise<PositionStats> {
   const rows = await sql()`
     select
-      coalesce(sum(renewal_price_cents) filter (where status in ('open', 'stop_pending')), 0)::int as exposure_cents,
-      count(*) filter (where status in ('open', 'stop_pending', 'approved', 'cancelling'))::int as active_trials,
+      coalesce(sum(renewal_price_cents) filter (
+        where status in ('open', 'stop_pending') and renewal_date is not null and has_trial is not false), 0)::int as exposure_cents,
+      count(*) filter (where status in ('open', 'stop_pending', 'approved', 'cancelling') and has_trial is not false)::int as active_trials,
       count(*) filter (where status in ('stop_pending', 'failed'))::int as action_needed,
       coalesce(sum(renewal_price_cents) filter (where status = 'closed'), 0)::int as avoided_cents
     from positions`;

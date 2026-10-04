@@ -6,6 +6,7 @@ import { hasModel, model } from "@/llm";
 import type { Terms } from "@/types";
 
 type Partial = {
+  has_trial: boolean | null;
   trial_days: number | null;
   renewal_price: number | null;
   currency: string | null;
@@ -16,6 +17,7 @@ type Partial = {
 };
 
 const EMPTY: Partial = {
+  has_trial: null,
   trial_days: null,
   renewal_price: null,
   currency: null,
@@ -29,6 +31,11 @@ const EMPTY: Partial = {
 const EXA_SCHEMA = {
   type: "object" as const,
   properties: {
+    // A string, not a boolean: Exa returns empty values for unknowns, and an empty boolean would read as "no trial".
+    trial_offered: {
+      type: "string",
+      description: "'yes' if new customers can start a free trial of a paid plan, 'no' if there is only a free plan or no trial, 'unknown' if the pages do not say",
+    },
     trial_days: { type: "number", description: "Length of the free trial in days" },
     renewal_price: { type: "number", description: "Price charged after the trial ends, in major units, for the plan the trial converts to" },
     currency: { type: "string", description: "ISO currency code, for example USD" },
@@ -41,6 +48,10 @@ const EXA_SCHEMA = {
 };
 
 const EmailTerms = z.object({
+  has_trial: z
+    .boolean()
+    .nullable()
+    .describe("true if the email says a free trial started; false if it says the account is on a free plan with no trial; null otherwise"),
   trial_days: z.number().int().nullable(),
   renewal_price: z.number().nullable(),
   currency: z.string().nullable(),
@@ -55,8 +66,18 @@ function num(v: unknown): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+// Exa sometimes writes "null — explanation" or "unknown" instead of leaving a field empty.
 function str(v: unknown): string | null {
-  return typeof v === "string" && v.trim() ? v.trim() : null;
+  if (typeof v !== "string") return null;
+  const t = v.trim();
+  if (!t || /^(null|unknown|n\/a|none)\b/i.test(t)) return null;
+  return t;
+}
+
+// The first URL in the value. Exa sometimes follows the URL with an explanation.
+function url(v: unknown): string | null {
+  const t = str(v);
+  return t?.match(/https?:\/\/[^\s"'<>)\u2014,]+/)?.[0]?.replace(/[.;:]+$/, "") ?? null;
 }
 
 async function fromWeb(name: string, domain: string): Promise<{ terms: Partial; sources: string[] }> {
@@ -87,13 +108,14 @@ async function fromWeb(name: string, domain: string): Promise<{ terms: Partial; 
   return {
     sources,
     terms: {
+      has_trial: /^yes$/i.test(String(content.trial_offered ?? "")) ? true : /^no$/i.test(String(content.trial_offered ?? "")) ? false : null,
       trial_days: num(content.trial_days),
       renewal_price: num(content.renewal_price),
       currency: str(content.currency),
       billing_period: str(content.billing_period),
       plan_name: str(content.plan_name),
       cancel_policy: str(content.cancel_policy),
-      cancel_url: str(content.cancel_url),
+      cancel_url: url(content.cancel_url),
     },
   };
 }
@@ -110,9 +132,11 @@ export function fromEmailRules(text: string): Partial {
   const price = t.match(/(US\$|\$|€|£)\s?(\d{1,4}(?:[.,]\d{2})?)\s*(?:\/|per |a |each )\s*(month|mo|year|yr|week)\b/i);
   const currency = price ? ({ "$": "USD", "US$": "USD", "€": "EUR", "£": "GBP" } as Record<string, string>)[price[1]] ?? "USD" : null;
   const period = price ? (/^(year|yr)$/i.test(price[3]) ? "year" : /^week$/i.test(price[3]) ? "week" : "month") : null;
+  const trialDays = days ? Number(days) : weeks ? Number(weeks) * 7 : null;
   return {
     ...EMPTY,
-    trial_days: days ? Number(days) : weeks ? Number(weeks) * 7 : null,
+    has_trial: trialDays != null || /\b(free )?trial (has )?(started|begun|is active)\b|\byour (free )?trial\b/i.test(t) ? true : null,
+    trial_days: trialDays,
     renewal_price: price ? Number(price[2].replace(",", ".")) : null,
     currency,
     billing_period: period,
@@ -131,6 +155,7 @@ async function fromEmail(name: string, emailText: string): Promise<Partial> {
     prompt: `Service: ${name}\n<email>\n${emailText.slice(0, 8000)}\n</email>`,
   }).catch(() => ({ output: EMPTY }));
   return {
+    has_trial: output.has_trial ?? rules.has_trial,
     trial_days: output.trial_days ?? rules.trial_days,
     renewal_price: output.renewal_price ?? rules.renewal_price,
     currency: output.currency ?? rules.currency,
@@ -139,6 +164,11 @@ async function fromEmail(name: string, emailText: string): Promise<Partial> {
     cancel_policy: output.cancel_policy,
     cancel_url: output.cancel_url,
   };
+}
+
+// Exa only: what a new customer would get. Used before an agent sign-up, when there is no email yet.
+export async function lookupWebTerms(service_name: string, service_domain: string): Promise<Terms> {
+  return lookupTerms({ service_name, service_domain });
 }
 
 export async function lookupTerms(input: { service_name: string; service_domain: string; emailText?: string }): Promise<Terms> {
@@ -151,8 +181,12 @@ export async function lookupTerms(input: { service_name: string; service_domain:
   const sources = web.status === "fulfilled" ? web.value.sources : [];
   // The email describes this user's trial, so it wins on length and price. The vendor's pages win on how to cancel.
   const price = m.renewal_price ?? w.renewal_price;
+  const trialDays = m.trial_days ?? w.trial_days;
+  // The user's own email decides whether a trial started. Without it, the vendor's pages decide whether one exists.
+  const hasTrial = m.has_trial ?? (trialDays != null ? true : null) ?? w.has_trial;
   return {
-    trial_days: m.trial_days ?? w.trial_days,
+    has_trial: hasTrial,
+    trial_days: hasTrial === false ? null : trialDays,
     renewal_price_cents: price == null ? null : Math.round(price * 100),
     currency: (m.currency ?? w.currency ?? "USD").toUpperCase(),
     billing_period: m.billing_period ?? w.billing_period,

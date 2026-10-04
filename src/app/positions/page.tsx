@@ -43,7 +43,7 @@ export default async function PositionsPage() {
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Current exposure"
-          hint="Renewal prices of trials that are still open"
+          hint="Renewal prices of open trials with a known renewal date. Free plans don't count."
           value={
             <>
               {money(stats.exposure_cents)}
@@ -105,9 +105,21 @@ export default async function PositionsPage() {
                           </span>
                         </Link>
                       </td>
-                      <td className="px-7 py-5 text-slate-800">{p.renewal_date ? day(p.renewal_date) : "Reading terms…"}</td>
                       <td className="px-7 py-5 text-slate-800">
-                        {p.renewal_price_cents == null ? "Unknown" : price(p.renewal_price_cents, p.currency, p.billing_period)}
+                        {p.has_trial === false
+                          ? "No trial"
+                          : p.renewal_date
+                            ? day(p.renewal_date)
+                            : p.terms_checked_at
+                              ? "Unknown"
+                              : "Reading terms…"}
+                      </td>
+                      <td className="px-7 py-5 text-slate-800">
+                        {p.has_trial === false
+                          ? "Free plan"
+                          : p.renewal_price_cents == null
+                            ? "Unknown"
+                            : price(p.renewal_price_cents, p.currency, p.billing_period)}
                       </td>
                       <td className="px-7 py-5">
                         <StatusPill status={p.status} />

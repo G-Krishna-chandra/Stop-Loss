@@ -23,10 +23,10 @@ function isActive(href: string, path: string): boolean {
 export function Sidebar() {
   const path = usePathname();
   return (
-    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-sidebar px-3 py-6 text-slate-300 md:flex">
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-neutral-200 bg-white px-3 py-6 text-neutral-600 md:flex">
       <Link href="/" className="mb-9 flex items-center gap-2.5 px-3">
         <Logo />
-        <span className="text-[21px] font-semibold tracking-tight text-white">StopLoss</span>
+        <span className="text-[21px] font-semibold tracking-tight text-black">StopLoss</span>
       </Link>
       <nav className="flex flex-col gap-1" aria-label="Main">
         {NAV.map(({ href, label, icon: Icon }) => {
@@ -38,7 +38,7 @@ export function Sidebar() {
               aria-current={active ? "page" : undefined}
               className={clsx(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] font-medium transition-colors",
-                active ? "bg-sidebar-active text-white" : "hover:bg-white/5 hover:text-white",
+                active ? "bg-black text-white" : "hover:bg-neutral-100 hover:text-black",
               )}
             >
               <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />

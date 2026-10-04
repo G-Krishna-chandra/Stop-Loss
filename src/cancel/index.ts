@@ -116,21 +116,24 @@ export type SignupResult = { outcome: AgentOutcome; detail: string; replayUrl: s
 
 export async function runSignup(
   runId: string,
-  target: { url: string; name: string; domain: string; email: string; fullName: string },
+  target: { url: string; name: string; domain: string; email: string; fullName: string; offer: string },
   hooks: Pick<AgentHooks, "emailLogin">,
   opts: { resume?: boolean } = {},
 ): Promise<SignupResult> {
   const browser = await browserFor(runId, target.domain, true, Boolean(opts.resume));
-  if (!opts.resume) await advanceRun(runId, "research");
+  if (!opts.resume) await advanceRun(runId, "create_account");
   const since = new Date((await getRun(runId))?.started_at ?? Date.now());
 
-  const instructions = `You sign the user up for a free trial of ${target.name}.
+  const instructions = `You start a free trial of a paid ${target.name} plan for the user.
+What StopLoss found about the offer: ${target.offer}
 Use this email: ${target.email}. Use this full name: ${target.fullName}.
 ${SAFETY}
-- Prefer the free trial or free plan sign-up. Use "sign up with email", never Google or another single sign-on.
+- Use "sign up with email", never Google, Apple, phone, or another single sign-on.
 - If the site emails a verification link or code, use use_email_login.
-- If the trial requires a payment card, stop on that page and finish with needs_card. The user will enter it.
-- Finish with done once the account exists and the trial (or free plan) is active.`;
+- After the account exists, find and start the free trial of the paid plan (often "Start free trial", "Try Pro free", or on the pricing or upgrade page).
+- If starting the trial asks for a payment card, stop on that page and finish with needs_card. The user will enter it.
+- If the account exists but the service offers no free trial of a paid plan (only a free plan), finish with no_trial. A free account is not a trial.
+- Finish with done only when a free trial of a paid plan is active.`;
 
   let result: { outcome: AgentOutcome; detail: string };
   try {
@@ -140,7 +143,7 @@ ${SAFETY}
       instructions,
       task: opts.resume
         ? `The previous attempt was interrupted or waited for the user. Look at the current page and continue signing up for ${target.name} with ${target.email}.`
-        : `Create a ${target.name} account with a free trial for ${target.email}.`,
+        : `Create a ${target.name} account for ${target.email} and start its free trial of a paid plan.`,
       stepKeys: ["research", "create_account", "fill_form", "verify_email", "payment", "confirm_trial"],
       since,
       resume: opts.resume,

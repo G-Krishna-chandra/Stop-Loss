@@ -19,8 +19,8 @@ import {
   advanceRun,
 } from "@/db";
 import { classify, ensureInbox, getMessage, listInbox, parseSender, registrableDomain, serviceName, stopLossAddress } from "@/inbox";
-import { lookupTerms } from "@/terms";
-import type { AgentRun, ApprovalRequest, Position } from "@/types";
+import { lookupTerms, lookupWebTerms } from "@/terms";
+import type { AgentRun, ApprovalRequest, Position, Terms } from "@/types";
 
 function dollars(cents: number | null, currency: string): string {
   return cents == null ? "an unknown price" : `${currency === "USD" ? "$" : currency + " "}${(cents / 100).toFixed(2)}`;
@@ -259,15 +259,42 @@ export async function prepareSignup(url: string): Promise<AgentRun> {
   return createRun({ kind: "signup", service_name: name, position_id: null, target_url: parsed.toString(), steps: SIGNUP_STEPS });
 }
 
+function describeOffer(name: string, t: Terms): string {
+  if (t.has_trial === false) return `${name} offers no free trial of a paid plan, only a free plan.`;
+  const length = t.trial_days != null ? `a ${t.trial_days}-day free trial` : "a free trial (length not found)";
+  const plan = t.plan_name ? ` of ${t.plan_name}` : "";
+  const after =
+    t.renewal_price_cents != null
+      ? `, then ${dollars(t.renewal_price_cents, t.currency)}${t.billing_period ? "/" + t.billing_period : ""}`
+      : "";
+  return `${length}${plan}${after}.`;
+}
+
+function failSteps(run: AgentRun | null, detail: string) {
+  return (run?.steps ?? []).map((s) => (s.status === "active" ? { ...s, status: "failed" as const, detail } : s));
+}
+
 export async function executeSignup(runId: string, opts: { resume?: boolean } = {}): Promise<void> {
   const run = await getRun(runId);
   if (!run?.target_url) return;
   const url = new URL(run.target_url);
   const domain = url.hostname.replace(/^www\./, "");
   const email = await stopLossAddress();
+
+  // Research first: only start a run when there is a real trial to start. A free plan is not a position.
+  if (!opts.resume) await advanceRun(runId, "research", "Checking whether there is a free trial");
+  const terms = await lookupWebTerms(run.service_name, domain).catch(() => null);
+  if (!opts.resume && terms?.has_trial === false) {
+    const detail = `${run.service_name} has no free trial of a paid plan, only a free plan, so StopLoss didn't create an account.`;
+    await updateRun(runId, { status: "failed", error: detail, steps: failSteps(await getRun(runId), detail) });
+    return;
+  }
+  const offer = terms ? describeOffer(run.service_name, terms) : "Not found. Look for a free trial on the pricing page.";
+  if (!opts.resume) await advanceRun(runId, "research", `Found ${offer}`, "done");
+
   const result = await runSignup(
     runId,
-    { url: url.toString(), name: run.service_name, domain, email, fullName: process.env.STOPLOSS_FULL_NAME ?? "StopLoss User" },
+    { url: url.toString(), name: run.service_name, domain, email, fullName: process.env.STOPLOSS_FULL_NAME ?? "StopLoss User", offer },
     { emailLogin: emailLoginFor(domain) },
     opts,
   );
@@ -279,10 +306,19 @@ export async function executeSignup(runId: string, opts: { resume?: boolean } = 
       signup_email: email,
       created_by: "signup_run",
     });
-    if (created) await addEvent(position.id, "position_opened", "Account created", "StopLoss signed up in a live browser", { run_id: runId });
+    if (created) await addEvent(position.id, "position_opened", "Trial started", `StopLoss started ${offer}`, { run_id: runId });
     await advanceRun(runId, "position", "Position created", "done");
     await updateRun(runId, { status: "succeeded", position_id: position.id, replay_url: result.replayUrl });
-    await readTerms(position, "", null);
+    if (terms) {
+      const updated = await applyTerms(position.id, { ...terms, has_trial: true });
+      await addEvent(position.id, "terms_found", "Terms extracted", offer, { source_urls: terms.source_urls });
+      if (updated.stop_at) await addEvent(position.id, "stop_set", "Stop set", `StopLoss will ask you on ${when(updated.stop_at)}`);
+    } else {
+      await readTerms(position, "", null);
+    }
+  } else if (result.outcome === "no_trial") {
+    await advanceRun(runId, "confirm_trial", "Account created on the free plan. No trial to watch.", "done");
+    await updateRun(runId, { status: "succeeded", error: result.detail, replay_url: result.replayUrl });
   } else if (result.outcome === "needs_card") {
     await advanceRun(runId, "payment", "Enter your card in the live browser, then continue", "active");
     await updateRun(runId, { status: "paused", error: result.detail });

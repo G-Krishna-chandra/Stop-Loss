@@ -33,6 +33,12 @@ export const dynamic = "force-dynamic";
 const TABS = ["overview", "evidence", "activity"] as const;
 type Tab = (typeof TABS)[number];
 
+function trialLength(p: Position): string {
+  if (!p.terms_checked_at) return "Reading terms…";
+  if (p.has_trial === false) return "No free trial";
+  return p.trial_days != null ? `${p.trial_days} days` : "Not found";
+}
+
 function origin(p: Position): string {
   if (p.created_by === "signup_run") return "Created by StopLoss sign-up workflow";
   if (p.created_by === "manual") return "Added by you";
@@ -67,7 +73,8 @@ export default async function PositionPage({ params, searchParams }: PageProps<"
     pendingApprovalFor(id),
     latestRunFor(id),
   ]);
-  const canCancel = ["open", "stop_pending", "failed"].includes(position.status);
+  const noTrial = position.has_trial === false;
+  const canCancel = !noTrial && ["open", "stop_pending", "failed"].includes(position.status);
   const target = cancelTargetFor(position, pending);
   const trace = events.map((e) => ({ id: e.id, title: e.title, detail: e.detail, at: e.created_at }));
 
@@ -132,16 +139,39 @@ export default async function PositionPage({ params, searchParams }: PageProps<"
               <CardTitle icon={FileText}>Trial details</CardTitle>
               <DetailRows
                 rows={[
-                  ["Plan", position.plan_name ?? "Unknown"],
-                  ["Trial length", position.trial_days != null ? `${position.trial_days} days` : "Reading terms…"],
-                  ["Renews on", day(position.renewal_date)],
-                  ["Price", price(position.renewal_price_cents, position.currency, position.billing_period)],
+                  ["Plan", noTrial ? "Free plan" : (position.plan_name ?? "Unknown")],
+                  ["Trial length", trialLength(position)],
+                  ["Renews on", noTrial ? "Nothing renews" : position.renewal_date ? day(position.renewal_date) : "Unknown"],
+                  [
+                    noTrial ? "Paid plan" : "Price",
+                    position.renewal_price_cents == null ? "Unknown" : price(position.renewal_price_cents, position.currency, position.billing_period),
+                  ],
                   ["Card", position.card_last4 ? `•••• ${position.card_last4}` : "Your own card"],
                 ]}
               />
             </Card>
             <Card className="p-6">
               <CardTitle icon={CalendarDays}>Upcoming renewal</CardTitle>
+              {noTrial ? (
+                <>
+                  <div className="text-[32px] font-bold tracking-tight text-slate-900">No renewal</div>
+                  <p className="mt-1 text-[17px] text-slate-500">
+                    This account is on a free plan, so nothing renews and there is nothing at risk.
+                  </p>
+                </>
+              ) : !position.renewal_date ? (
+                <>
+                  <div className="text-[32px] font-bold tracking-tight text-slate-900">
+                    {position.terms_checked_at ? "Unknown" : "Reading terms…"}
+                  </div>
+                  <p className="mt-1 text-[17px] text-slate-500">
+                    {position.terms_checked_at
+                      ? "StopLoss couldn’t find when this trial ends, so no stop is set yet."
+                      : "StopLoss is reading the trial terms."}
+                  </p>
+                </>
+              ) : (
+                <>
               <div className="text-[32px] font-bold tracking-tight text-slate-900">{day(position.renewal_date)}</div>
               <p className="mt-1 text-[17px] text-slate-500">Your trial will convert to a paid subscription.</p>
               <div className="mt-5 flex gap-4 rounded-xl bg-blue-50 p-5">
@@ -157,6 +187,8 @@ export default async function PositionPage({ params, searchParams }: PageProps<"
               <div className="mt-5 border-t border-slate-100 pt-4">
                 <DetailRows rows={[["Renews at", price(position.renewal_price_cents, position.currency, position.billing_period)]]} />
               </div>
+                </>
+              )}
             </Card>
             <Card className="p-6">
               <CardTitle icon={Mail}>Source emails</CardTitle>

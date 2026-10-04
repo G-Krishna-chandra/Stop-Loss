@@ -29,6 +29,9 @@ export type Position = {
   cancel_url: string | null;
   cancel_policy: string | null;
   source_urls: string[];
+  // null until known. false: the service only has a free plan, so nothing renews and nothing is at risk.
+  has_trial: boolean | null;
+  terms_checked_at: string | null;
   status: PositionStatus;
   status_reason: string | null;
   card_last4: string | null;
@@ -79,6 +82,7 @@ export type ApprovalRequest = {
 };
 
 export type Terms = {
+  has_trial: boolean | null;
   trial_days: number | null;
   renewal_price_cents: number | null;
   currency: string;
