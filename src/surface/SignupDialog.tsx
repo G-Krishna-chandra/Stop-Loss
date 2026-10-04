@@ -1,10 +1,12 @@
 "use client";
 
-import { Check, Info, Plus, X } from "lucide-react";
+import clsx from "clsx";
+import { Check, Info, Mic, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ServiceLogo } from "./ServiceLogo";
 import { buttonClass } from "./ui";
+import { useStartVoice } from "./voice/VoiceAssistant";
 
 function domainOf(input: string): string | null {
   try {
@@ -15,12 +17,31 @@ function domainOf(input: string): string | null {
   }
 }
 
-// "Have StopLoss sign up for X?" The user names a product, reviews what the agent will do, then confirms.
-export function SignupButton({ canRun }: { canRun: boolean }) {
+// Pulls the site out of a typed request like "sign me up for cursor.com". Without a site, the rest is treated as a
+// product name, which the sign-up route resolves to the official website.
+function targetOf(prompt: string): { query: string; domain: string | null } | null {
+  const text = prompt.trim();
+  const site = text.match(/(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s,]*)?/i)?.[0]?.replace(/[.,;:!?)]+$/, "");
+  if (site) return { query: site, domain: domainOf(site) };
+  const name = text
+    .replace(/^(please\s+)?(can you\s+)?(sign (me )?up|start|get me|try)(\s+(for|to|with))?\s+/i, "")
+    .replace(/\b(free\s+)?trials?\b(\s+(of|for))?/gi, "")
+    .replace(/^(a|an|the)\s+/i, "")
+    .replace(/[.!?]+$/, "")
+    .trim();
+  return name.length >= 2 ? { query: name, domain: null } : null;
+}
+
+// "Have StopLoss sign up for X?" The user says or types what to sign up for, reviews what the agent will do, then confirms.
+export function SignupButton({ canRun, large = false }: { canRun: boolean; large?: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className={buttonClass.secondary} onClick={() => setOpen(true)}>
+      <button
+        type="button"
+        className={large ? clsx(buttonClass.primary, "px-8 py-4 text-[17px]") : buttonClass.secondary}
+        onClick={() => setOpen(true)}
+      >
         <Plus className="h-5 w-5" aria-hidden="true" />
         Sign up for a trial
       </button>
@@ -31,21 +52,23 @@ export function SignupButton({ canRun }: { canRun: boolean }) {
 
 function SignupDialog({ canRun, onClose }: { canRun: boolean; onClose: () => void }) {
   const router = useRouter();
+  const startVoice = useStartVoice();
   const [url, setUrl] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const domain = domainOf(url.trim());
-  const name = domain ? domain.split(".")[0].replace(/^./, (c) => c.toUpperCase()) : "";
+  const target = targetOf(url);
+  const domain = target?.domain ?? null;
+  const name = (domain ? domain.split(".")[0] : (target?.query ?? "")).replace(/^./, (c) => c.toUpperCase());
 
   async function start() {
-    if (!domain) return;
+    if (!target) return;
     setBusy(true);
     setError(null);
     const res = await fetch("/api/signup", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ url: url.trim() }),
+      body: JSON.stringify({ url: target.query }),
     });
     const data = (await res.json().catch(() => ({}))) as { runId?: string; error?: string };
     if (!res.ok || !data.runId) {
@@ -67,29 +90,57 @@ function SignupDialog({ canRun, onClose }: { canRun: boolean; onClose: () => voi
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (domain) setConfirming(true);
+              if (target) setConfirming(true);
             }}
           >
             <h2 id="signup-title" className="text-[26px] font-bold tracking-tight text-ink">
               Sign up for a trial
             </h2>
-            <p className="mt-2 text-muted">Name the product’s website. You’ll review the details before StopLoss starts.</p>
-            <label htmlFor="signup-url" className="mt-6 block text-sm font-medium text-neutral-700">
-              Website
+            <p className="mt-2 text-muted">Tell StopLoss what to sign up for. You’ll review it before anything starts.</p>
+            <button
+              type="button"
+              onClick={() => {
+                startVoice();
+                onClose();
+              }}
+              className="mt-6 flex w-full items-center gap-4 rounded-xl border border-line p-4 text-left hover:bg-neutral-50"
+            >
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink text-white">
+                <Mic className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <span>
+                <span className="block font-semibold text-ink">Talk to StopLoss</span>
+                <span className="block text-[15px] text-muted">Say something like “sign me up for a Cursor trial.”</span>
+              </span>
+            </button>
+            <div className="my-5 flex items-center gap-3 text-sm text-muted">
+              <span className="h-px flex-1 bg-line" />
+              or type it
+              <span className="h-px flex-1 bg-line" />
+            </div>
+            <label htmlFor="signup-url" className="sr-only">
+              What should StopLoss sign up for?
             </label>
-            <input
+            <textarea
               id="signup-url"
               autoFocus
+              rows={2}
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="gamma.app"
-              className="mt-1.5 w-full rounded-lg border border-line px-4 py-3 text-[16px] outline-none focus:border-ink focus:ring-2 focus:ring-neutral-200"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (target) setConfirming(true);
+                }
+              }}
+              placeholder="Sign me up for a trial at gamma.app"
+              className="w-full resize-none rounded-lg border border-line px-4 py-3 text-[16px] outline-none focus:border-ink focus:ring-2 focus:ring-neutral-200"
             />
-            <div className="mt-7 flex justify-end gap-3">
+            <div className="mt-6 flex justify-end gap-3">
               <button type="button" onClick={onClose} className={buttonClass.secondary}>
                 Cancel
               </button>
-              <button type="submit" disabled={!domain} className={buttonClass.primary}>
+              <button type="submit" disabled={!target} className={buttonClass.primary}>
                 Continue
               </button>
             </div>
@@ -97,10 +148,10 @@ function SignupDialog({ canRun, onClose }: { canRun: boolean; onClose: () => voi
         ) : (
           <>
             <div className="flex items-center gap-4">
-              <ServiceLogo name={name} domain={domain!} />
+              <ServiceLogo name={name} domain={domain ?? ""} />
               <div>
                 <div className="text-lg font-semibold text-ink">{name}</div>
-                <div className="text-muted">{domain}</div>
+                <div className="text-muted">{domain ?? "StopLoss finds the official site"}</div>
               </div>
             </div>
             <h2 id="signup-title" className="mt-7 text-[28px] font-bold leading-tight tracking-tight text-ink">

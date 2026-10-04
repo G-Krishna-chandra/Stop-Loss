@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { MobileNav, Sidebar } from "@/surface/Sidebar";
-import { TopBar } from "@/surface/TopBar";
+import { CornerControls } from "@/surface/TopBar";
 import { VoiceProvider } from "@/surface/voice/VoiceAssistant";
 import "./globals.css";
 
@@ -27,9 +27,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <VoiceProvider>
         <div className="flex min-h-full">
           <Sidebar />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <TopBar />
+          <div className="relative flex min-w-0 flex-1 flex-col">
             <MobileNav />
+            <CornerControls />
             <main className="mx-auto w-full max-w-[2400px] flex-1 px-5 py-6 md:px-10 md:py-7 2xl:px-14">{children}</main>
           </div>
         </div>

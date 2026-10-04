@@ -371,15 +371,23 @@ function VoicePanel() {
   );
 }
 
-// Top bar control: starts the assistant, or reopens the panel while a conversation is on.
-export function VoiceButton({ pending }: { pending: number }) {
+// Starts the assistant, or reopens the panel while a conversation is on.
+export function useStartVoice(): () => void {
   const { start, setOpen } = useVoiceUi();
+  const { status } = useConversationStatus();
+  const on = status === "connected" || status === "connecting";
+  return () => (on ? setOpen(true) : void start());
+}
+
+// Corner control for the assistant.
+export function VoiceButton({ pending }: { pending: number }) {
+  const startVoice = useStartVoice();
   const { status } = useConversationStatus();
   const on = status === "connected" || status === "connecting";
   return (
     <button
       type="button"
-      onClick={() => (on ? setOpen(true) : void start())}
+      onClick={startVoice}
       className={clsx(
         "inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-semibold",
         on ? "border-black bg-black text-white" : "border-neutral-300 text-black hover:bg-neutral-50",

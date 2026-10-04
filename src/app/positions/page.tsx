@@ -2,6 +2,8 @@ import { ChevronsUpDown } from "lucide-react";
 import Link from "next/link";
 import { has } from "@/config";
 import { getStats, listPendingApprovals, listPositions, latestRunFor } from "@/db";
+import { stopLossAddress } from "@/inbox";
+import { CopyButton } from "@/surface/CopyButton";
 import { CancelButton } from "@/surface/CancelDialog";
 import { cancelTargetFor } from "@/surface/cancelTarget";
 import { day, money, price } from "@/surface/format";
@@ -22,7 +24,12 @@ export default async function PositionsPage() {
     );
   }
 
-  const [positions, stats, pending] = await Promise.all([listPositions(), getStats(), listPendingApprovals()]);
+  const [positions, stats, pending, email] = await Promise.all([
+    listPositions(),
+    getStats(),
+    listPendingApprovals(),
+    has("AGENTMAIL_API_KEY") ? stopLossAddress().catch(() => null) : Promise.resolve(null),
+  ]);
   const pendingBy = new Map(pending.map((a) => [a.position_id, a]));
   const runs = new Map(
     await Promise.all(
@@ -37,7 +44,7 @@ export default async function PositionsPage() {
       <PageHeader eyebrow="Your trials"
         title="Positions"
         subtitle="Your trial subscriptions, tracked and protected."
-        actions={<SignupButton canRun={has("KERNEL_API_KEY")} />}
+        actions={positions.length > 0 ? <SignupButton canRun={has("KERNEL_API_KEY")} /> : undefined}
       />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -63,14 +70,21 @@ export default async function PositionsPage() {
 
       <Card className="overflow-hidden">
         {positions.length === 0 ? (
-          <div className="px-8 py-16 text-center">
-            <p className="text-lg font-semibold text-ink">No positions yet</p>
+          <div className="flex flex-col items-center px-8 py-16 text-center">
+            <p className="text-2xl font-semibold tracking-tight text-ink">No positions yet</p>
             <p className="mx-auto mt-2 max-w-md text-muted">
-              Start a free trial with your StopLoss email. The welcome email opens a position here within a minute.
+              StopLoss signs up for the trial in a live browser with your StopLoss email, then watches the renewal.
             </p>
-            <Link href="/" className="mt-5 inline-block font-medium text-ink underline decoration-neutral-300 underline-offset-4 hover:decoration-ink">
-              Get your StopLoss email
-            </Link>
+            <div className="mt-7">
+              <SignupButton canRun={has("KERNEL_API_KEY")} large />
+            </div>
+            {email ? (
+              <div className="mt-6 flex items-center gap-3 text-[15px] text-muted">
+                Or sign up yourself with
+                <span className="font-mono text-ink">{email}</span>
+                <CopyButton value={email} compact />
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="overflow-x-auto">

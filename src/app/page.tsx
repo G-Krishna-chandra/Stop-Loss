@@ -85,7 +85,7 @@ export default async function HomePage() {
           </div>
         </div>
         {/* The illustration is drawn at a fixed size; it grows with the screen so wide displays don't leave a gap. */}
-        <div className="hidden justify-center lg:flex">
+        <div className="hidden justify-center lg:flex lg:pt-12">
           <div className="origin-top scale-[0.92] -mb-[35px] 2xl:mb-[44px] 2xl:scale-110 3xl:mb-[132px] 3xl:scale-[1.3]">
             <HeroArt email={email} />
           </div>
