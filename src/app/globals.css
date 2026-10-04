@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@theme {
+  --color-brand: #2563eb;
+  --color-brand-dark: #1d4ed8;
+  --color-brand-soft: #eff6ff;
+  --color-ink: #0f172a;
+  --color-sidebar: #111827;
+  --color-sidebar-active: #273244;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: #f8fafc;
+  color: var(--color-ink);
+}
+
+@keyframes voice-bar {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.voice-bar {
+  animation: voice-bar 1s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-bar,
+  .animate-spin,
+  .animate-pulse {
+    animation: none;
+  }
+}
