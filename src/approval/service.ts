@@ -119,15 +119,22 @@ export function createApprovalService(deps: { db: Db }): ApprovalService {
 
       let position = await requirePosition(approval.position_id);
       if (target && position.status !== target) {
-        try {
-          position = await db.transitionPosition(approval.position_id, target);
-        } catch (error) {
-          if (!(error instanceof InvalidTransitionError)) throw error;
-          position = await requirePosition(approval.position_id);
-          if (position.status !== target) {
-            throw new PositionChangedError(position.id, position.status, target);
+        if (position.status === "stop_pending") {
+          try {
+            position = await db.transitionPosition(approval.position_id, target);
+          } catch (error) {
+            if (!(error instanceof InvalidTransitionError)) throw error;
+            position = await requirePosition(approval.position_id);
+            if (position.status !== target && wasPending) {
+              throw new PositionChangedError(position.id, position.status, target);
+            }
           }
+        } else if (wasPending) {
+          // Only reachable if the position moved between the pre-check and now.
+          throw new PositionChangedError(position.id, position.status, target);
         }
+        // Not pending and already past stop_pending: a repeat of a decision that was applied
+        // earlier (the flow has moved on). Nothing to do; fall through and return the result.
       }
 
       if (wasPending && meta.via) {

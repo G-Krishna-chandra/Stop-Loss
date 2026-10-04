@@ -10,4 +10,4 @@ try {
 
 const rows = checkEnv(process.env);
 console.log(renderEnvReport(rows));
-process.exit(rows.every((r) => r.status === "ok") ? 0 : 1);
+process.exit(rows.every((r) => r.status === "ok" || r.status === "optional") ? 0 : 1);

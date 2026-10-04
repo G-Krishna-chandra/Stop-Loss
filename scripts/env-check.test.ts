@@ -24,6 +24,13 @@ describe("env check", () => {
     expect(by["DATABASE_URL"]).toBe("ok");
   });
 
+  it("treats unset optional variables as fine", () => {
+    const rows = checkEnv({}, ENV_SPECS);
+    const optional = rows.filter((r) => r.status === "optional").map((r) => r.name);
+    expect(optional).toEqual(expect.arrayContaining(["KERNEL_PROFILE", "DEV_APPROVAL_TOKEN"]));
+    expect(rows.find((r) => r.name === "KERNEL_PROJECT_ID")?.status).toBe("missing"); // unchanged for now
+  });
+
   it("never puts a value in the report", () => {
     const secret = "whsec_SUPER_SECRET_VALUE_123";
     const url = "postgresql://user:hunter2@ep-cool-123.neon.tech/db";

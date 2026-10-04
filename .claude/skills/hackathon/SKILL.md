@@ -94,14 +94,28 @@ the next milestone. Tick a row when the key is in `.env` AND a real call has wor
 
 | Done | Tool | Env vars | Used by | Needed for | Docs |
 | --- | --- | --- | --- | --- | --- |
-| [ ] | AgentMail | `AGENTMAIL_API_KEY`, `AGENTMAIL_WEBHOOK_SECRET` | `src/inbox` | Real inbound email. Nothing starts without it. Also register the webhook URL (public, see Fly.io). | https://docs.agentmail.to |
+| [ ] | AgentMail | `AGENTMAIL_API_KEY`, `AGENTMAIL_WEBHOOK_SECRET` | `src/inbox` | Real inbound email. Nothing starts without it. The running code only needs the webhook secret; the API key is for creating the inbox and webhook (setup script, still to do). Register the webhook URL (public, see Fly.io). | https://docs.agentmail.to |
 | [ ] | Neon | `DATABASE_URL` | `src/db` | Real storage. Run `npm run db:migrate` once, then re-check with a real welcome email. Dev works without it (in-memory). | https://neon.com/docs |
 | [ ] | Exa | `EXA_API_KEY` | `src/terms` | Trial length, price and cancel path. | https://exa.ai/docs |
 | [ ] | Kernel | `KERNEL_API_KEY`, `KERNEL_PROJECT_ID` | `src/cancel` | Browser sessions that cancel, plus live view and replay URLs. Must support parallel sessions. | https://kernel.sh/docs |
-| [ ] | Model access | `AI_GATEWAY_API_KEY` | `src/agent` | The agent and workflow (Mastra itself is a library). | https://mastra.ai/docs |
+| [ ] | Model access | `AI_GATEWAY_API_KEY` | `src/agent` | NOT needed for the core loop. The agent is a deterministic Mastra workflow with no LLM in it, on purpose (no model output can trigger a cancel). Only needed if we add an LLM step, e.g. smarter cancel navigation. | https://mastra.ai/docs |
 | [ ] | Fly.io | (account login) | deploy | A public URL so AgentMail can reach the webhook. A tunnel works for dev. This is our inference, confirm the plan. | https://fly.io/docs |
 | [ ] | Assistant UI | none expected | `src/surface` | Only if the UI decision picks it. Best UI side quest. | https://assistant-ui.com/docs |
 | [ ] | Executor | unknown | unknown | Not part of our plan yet. Ask what it offers before spending time. | event page |
 
 Rules: check each tool's docs for the exact call before using it. Do not paste keys into chat,
 logs, issues or PRs. If a credit code is needed, redeem it in the sponsor's own dashboard.
+
+## 9. Running the loop
+
+The modules are built and tested (`npm test`). `scripts/run-agent.ts` wires them into one server.
+
+- Rehearse with no keys: `AGENTMAIL_WEBHOOK_SECRET=whsec_<any base64> DEV_APPROVAL_TOKEN=<any> npm run agent:run -- --fake`,
+  then in another terminal `npm run inbox:fake -- "Welcome to Notion"`, then `"Your free trial ends tomorrow"`,
+  `GET /approvals` and `POST /approvals/:id/approve` with header `x-dev-token`, then `"Your subscription has been cancelled"`.
+- Real run: fill `.env` (see section 8, check with `npm run check:env`), `npm run db:migrate`, then `npm run agent:run`.
+- Safety: nothing cancels without `resolveApproval(id, "approved")`. The dev approval endpoints are disabled unless `DEV_APPROVAL_TOKEN` is set.
+
+Still to do (needs keys, so last): per-service cancel recipes in `src/cancel/recipes.ts` tested on the 2 or 3 chosen
+services, a persistent Mastra store (so suspended runs survive a restart; the sweep already covers crashes), the AgentMail
+inbox and webhook setup script, making `KERNEL_PROJECT_ID` optional in `check:env`, and the UI decision.

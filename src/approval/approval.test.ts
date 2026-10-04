@@ -119,6 +119,33 @@ describe("approval service", () => {
       expect(changes).toHaveLength(1);
     });
 
+    it("repeating an approve after the flow moved on succeeds and changes nothing", async () => {
+      const handler = vi.fn();
+      svc.onResolved(handler);
+      const id = await svc.requestApproval(positionId);
+      await svc.resolveApproval(id, "approved");
+      await db.transitionPosition(positionId, "cancelling"); // the cancel has started
+      const again = await svc.resolveApproval(id, "approved"); // e.g. a double click
+      expect(again.approval.status).toBe("approved");
+      expect(again.position.status).toBe("cancelling");
+      expect(await status()).toBe("cancelling");
+      expect(handler).toHaveBeenCalledTimes(2);
+    });
+
+    it("repeating a decline after the position was kept succeeds", async () => {
+      const id = await svc.requestApproval(positionId);
+      await svc.resolveApproval(id, "declined");
+      expect((await svc.resolveApproval(id, "declined")).position.status).toBe("kept");
+    });
+
+    it("heals a crash between saving the decision and applying it", async () => {
+      const id = await svc.requestApproval(positionId);
+      await db.resolveApproval(id, "approved"); // decision saved, position still stop_pending
+      expect(await status()).toBe("stop_pending");
+      const healed = await svc.resolveApproval(id, "approved");
+      expect(healed.position.status).toBe("approved");
+    });
+
     it("refuses the opposite decision and changes nothing", async () => {
       const handler = vi.fn();
       const id = await svc.requestApproval(positionId);
