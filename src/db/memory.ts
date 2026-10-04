@@ -192,6 +192,12 @@ export function createMemoryDb(options: DbOptions = {}): Db {
       return a ? clone(a) : null;
     },
 
+    async listApprovals(filter) {
+      return [...approvals.values()]
+        .filter((a) => !filter?.status || a.status === filter.status)
+        .map(clone);
+    },
+
     async resolveApproval(id, decision) {
       const a = approvals.get(id);
       if (!a) throw new ApprovalNotFoundError(id);

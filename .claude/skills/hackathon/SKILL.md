@@ -85,3 +85,23 @@ Only after the loop in stop-loss section 2 works once (1:00 PM).
 - Demo account and test services still logged in.
 - Backup recording uploaded.
 - Presenter and demo driver agreed for the 2 minutes plus Q&A.
+
+## 8. Credits and keys to claim at the hackathon
+
+Sign in at the venue and claim credits for each sponsor tool. Keys go in `.env` (never committed;
+`.env.example` lists the names). Order below is the order we need them, because each unblocks
+the next milestone. Tick a row when the key is in `.env` AND a real call has worked.
+
+| Done | Tool | Env vars | Used by | Needed for | Docs |
+| --- | --- | --- | --- | --- | --- |
+| [ ] | AgentMail | `AGENTMAIL_API_KEY`, `AGENTMAIL_WEBHOOK_SECRET` | `src/inbox` | Real inbound email. Nothing starts without it. Also register the webhook URL (public, see Fly.io). | https://docs.agentmail.to |
+| [ ] | Neon | `DATABASE_URL` | `src/db` | Real storage. Run `npm run db:migrate` once, then re-check with a real welcome email. Dev works without it (in-memory). | https://neon.com/docs |
+| [ ] | Exa | `EXA_API_KEY` | `src/terms` | Trial length, price and cancel path. | https://exa.ai/docs |
+| [ ] | Kernel | `KERNEL_API_KEY`, `KERNEL_PROJECT_ID` | `src/cancel` | Browser sessions that cancel, plus live view and replay URLs. Must support parallel sessions. | https://kernel.sh/docs |
+| [ ] | Model access | `AI_GATEWAY_API_KEY` | `src/agent` | The agent and workflow (Mastra itself is a library). | https://mastra.ai/docs |
+| [ ] | Fly.io | (account login) | deploy | A public URL so AgentMail can reach the webhook. A tunnel works for dev. This is our inference, confirm the plan. | https://fly.io/docs |
+| [ ] | Assistant UI | none expected | `src/surface` | Only if the UI decision picks it. Best UI side quest. | https://assistant-ui.com/docs |
+| [ ] | Executor | unknown | unknown | Not part of our plan yet. Ask what it offers before spending time. | event page |
+
+Rules: check each tool's docs for the exact call before using it. Do not paste keys into chat,
+logs, issues or PRs. If a credit code is needed, redeem it in the sponsor's own dashboard.

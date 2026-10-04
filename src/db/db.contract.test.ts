@@ -326,6 +326,17 @@ describe.each(backends)("db contract: %s", (_name, build) => {
       expect((await db.getApproval(a.id))!.status).toBe("approved");
     });
 
+    it("lists approvals oldest first, optionally by status", async () => {
+      const a = await open({ sender_domain: "a.com" }, "a");
+      const b = await open({ sender_domain: "b.com" }, "b");
+      const first = await db.createApproval({ position_id: a, kind: "cancel", detail: "A" });
+      const second = await db.createApproval({ position_id: b, kind: "cancel", detail: "B" });
+      await db.resolveApproval(first.id, "approved");
+      expect((await db.listApprovals()).map((x) => x.id)).toEqual([first.id, second.id]);
+      expect((await db.listApprovals({ status: "pending" })).map((x) => x.id)).toEqual([second.id]);
+      expect((await db.listApprovals({ status: "declined" }))).toEqual([]);
+    });
+
     it("allows a new request after the previous one was resolved", async () => {
       const id = await open();
       const a = await db.createApproval({ position_id: id, kind: "cancel", detail: "d" });

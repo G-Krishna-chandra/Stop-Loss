@@ -313,6 +313,16 @@ export function createPostgresDb(run: SqlRunner, options: DbOptions = {}): Db {
       return row ? toApproval(row) : null;
     },
 
+    async listApprovals(filter) {
+      const rows = await run(
+        `SELECT ${APPROVAL_COLS} FROM approval_requests
+         WHERE ($1::text IS NULL OR status = $1::text)
+         ORDER BY created_at, id`,
+        [filter?.status ?? null],
+      );
+      return rows.map(toApproval);
+    },
+
     async resolveApproval(id, decision) {
       const resolved = await one(
         `WITH res AS (

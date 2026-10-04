@@ -1,6 +1,7 @@
 import type {
   ApprovalKind,
   ApprovalRequest,
+  ApprovalStatus,
   Event,
   IsoDate,
   Position,
@@ -78,6 +79,8 @@ export interface Db {
   /** Idempotent: if a pending approval of this kind exists for the position, it is returned. */
   createApproval(input: CreateApprovalInput): Promise<ApprovalRequest>;
   getApproval(id: string): Promise<ApprovalRequest | null>;
+  /** Oldest first, so a surface shows requests in the order they were raised. */
+  listApprovals(filter?: { status?: ApprovalStatus }): Promise<ApprovalRequest[]>;
   /**
    * Records the decision once. Repeating the same decision returns the stored result;
    * a different decision throws ApprovalAlreadyResolvedError. This only records. Resuming the
