@@ -11,7 +11,8 @@ export function verifyReceived(rawBody: string, headers: Headers): ReceivedRef |
   let payload: unknown;
   if (secret) {
     try {
-      payload = new Webhook(secret).verify(rawBody, {
+      // svix 2.x verify() throws on a bad signature and returns nothing on success, so parse the body ourselves.
+      new Webhook(secret).verify(rawBody, {
         "svix-id": headers.get("svix-id") ?? "",
         "svix-timestamp": headers.get("svix-timestamp") ?? "",
         "svix-signature": headers.get("svix-signature") ?? "",
@@ -19,6 +20,7 @@ export function verifyReceived(rawBody: string, headers: Headers): ReceivedRef |
     } catch {
       throw new WebhookError("Invalid webhook signature");
     }
+    payload = JSON.parse(rawBody);
   } else if (process.env.NODE_ENV !== "production" && process.env.ALLOW_UNSIGNED_WEBHOOKS === "1") {
     payload = JSON.parse(rawBody);
   } else {
