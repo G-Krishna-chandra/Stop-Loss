@@ -118,28 +118,28 @@ export function VoicePrompt({ approvalId, prompt }: { approvalId: string; prompt
 
   const busy = phase === "sending" || phase === "heard" || phase === "done";
   return (
-    <div className="mx-auto w-full max-w-[730px] rounded-2xl border border-slate-200 bg-white p-8 shadow-sm md:p-12">
+    <div className="mx-auto w-full max-w-[730px] rounded-2xl border border-line bg-white p-8 shadow-sm md:p-12">
       <div className="flex items-center gap-4">
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft">
           <Logo className="h-7 w-7" />
         </span>
-        <span className="text-lg font-semibold text-slate-900">StopLoss</span>
-        <span className="text-[15px] text-slate-500">Now</span>
+        <span className="text-lg font-semibold text-ink">StopLoss</span>
+        <span className="text-[15px] text-muted">Now</span>
       </div>
-      <p className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 px-8 py-7 text-[28px] font-medium leading-snug text-slate-900">{prompt}</p>
+      <p className="mt-6 rounded-2xl border border-line bg-neutral-50 px-8 py-7 text-[28px] font-medium leading-snug text-ink">{prompt}</p>
 
       <button
         type="button"
         onClick={start}
         disabled={!supported || busy || phase === "speaking" || phase === "listening"}
-        className="mt-8 flex w-full flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-slate-50/60 px-6 py-10 disabled:cursor-default"
+        className="mt-8 flex w-full flex-col items-center justify-center gap-4 rounded-2xl border border-line bg-neutral-50/60 px-6 py-10 disabled:cursor-default"
         aria-live="polite"
       >
         <span className="flex h-16 items-center gap-1.5" aria-hidden="true">
           {Array.from({ length: 21 }).map((_, i) => (
             <span
               key={i}
-              className={clsx("w-1.5 rounded-full", phase === "listening" || phase === "speaking" ? "voice-bar bg-brand" : "bg-blue-200")}
+              className={clsx("w-1.5 rounded-full", phase === "listening" || phase === "speaking" ? "voice-bar bg-brand" : "bg-neutral-200")}
               style={{
                 height: `${16 + ((i * 37) % 48)}px`,
                 animationDelay: `${(i % 7) * 0.12}s`,
@@ -148,7 +148,7 @@ export function VoicePrompt({ approvalId, prompt }: { approvalId: string; prompt
             />
           ))}
         </span>
-        <span className="text-lg text-slate-600">
+        <span className="text-lg text-muted">
           {!supported
             ? "Voice isn't available in this browser. Use the buttons."
             : phase === "speaking"
@@ -167,7 +167,7 @@ export function VoicePrompt({ approvalId, prompt }: { approvalId: string; prompt
                   )}
         </span>
       </button>
-      {message ? <p className="mt-4 text-center text-[15px] font-medium text-slate-700">{message}</p> : null}
+      {message ? <p className="mt-4 text-center text-[15px] font-medium text-neutral-700">{message}</p> : null}
 
       <div className="mt-7 grid grid-cols-2 gap-4">
         <button type="button" disabled={busy} onClick={() => decide("approve")} className={buttonClass.primary + " py-4 text-lg"}>
@@ -177,8 +177,8 @@ export function VoicePrompt({ approvalId, prompt }: { approvalId: string; prompt
           Keep it
         </button>
       </div>
-      <div className="mt-8 flex items-center gap-4 border-t border-slate-200 pt-7 text-[17px] text-slate-600">
-        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100">
+      <div className="mt-8 flex items-center gap-4 border-t border-line pt-7 text-[17px] text-muted">
+        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-soft">
           <Logo className="h-6 w-6" />
         </span>
         I&apos;ll only cancel after your approval.

@@ -16,7 +16,7 @@ export default async function PositionsPage() {
   if (!has("DATABASE_URL")) {
     return (
       <>
-        <PageHeader title="Positions" subtitle="Your trial subscriptions, tracked and protected." />
+        <PageHeader eyebrow="Your trials" title="Positions" subtitle="Your trial subscriptions, tracked and protected." />
         <SetupNeeded keys={["DATABASE_URL"]} what="The positions ledger" />
       </>
     );
@@ -34,7 +34,7 @@ export default async function PositionsPage() {
 
   return (
     <>
-      <PageHeader
+      <PageHeader eyebrow="Your trials"
         title="Positions"
         subtitle="Your trial subscriptions, tracked and protected."
         actions={<SignupButton canRun={has("KERNEL_API_KEY")} />}
@@ -64,11 +64,11 @@ export default async function PositionsPage() {
       <Card className="overflow-hidden">
         {positions.length === 0 ? (
           <div className="px-8 py-16 text-center">
-            <p className="text-lg font-semibold text-slate-900">No positions yet</p>
-            <p className="mx-auto mt-2 max-w-md text-slate-500">
+            <p className="text-lg font-semibold text-ink">No positions yet</p>
+            <p className="mx-auto mt-2 max-w-md text-muted">
               Start a free trial with your StopLoss email. The welcome email opens a position here within a minute.
             </p>
-            <Link href="/" className="mt-5 inline-block font-medium text-brand hover:underline">
+            <Link href="/" className="mt-5 inline-block font-medium text-ink underline decoration-neutral-300 underline-offset-4 hover:decoration-ink">
               Get your StopLoss email
             </Link>
           </div>
@@ -76,12 +76,12 @@ export default async function PositionsPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px] text-left">
               <thead>
-                <tr className="border-b border-slate-200 text-sm text-slate-600">
+                <tr className="border-b border-line text-sm text-muted">
                   {["Product", "Trial ends", "Renews at", "Status"].map((h) => (
                     <th key={h} scope="col" className="px-7 py-5 font-medium">
                       <span className="inline-flex items-center gap-1">
                         {h}
-                        <ChevronsUpDown className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+                        <ChevronsUpDown className="h-3.5 w-3.5 text-neutral-400" aria-hidden="true" />
                       </span>
                     </th>
                   ))}
@@ -90,7 +90,7 @@ export default async function PositionsPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-line">
                 {positions.map((p) => {
                   const approval = pendingBy.get(p.id);
                   const run = runs.get(p.id);
@@ -100,12 +100,12 @@ export default async function PositionsPage() {
                         <Link href={`/positions/${p.id}`} className="flex items-center gap-4">
                           <ServiceLogo name={p.service_name} domain={p.service_domain} />
                           <span>
-                            <span className="block font-semibold text-slate-900">{p.service_name}</span>
-                            <span className="block text-sm text-slate-500">{p.product_blurb ?? p.service_domain}</span>
+                            <span className="block font-semibold text-ink">{p.service_name}</span>
+                            <span className="block text-sm text-muted">{p.product_blurb ?? p.service_domain}</span>
                           </span>
                         </Link>
                       </td>
-                      <td className="px-7 py-5 text-slate-800">
+                      <td className="px-7 py-5 text-neutral-800">
                         {p.has_trial === false
                           ? "No trial"
                           : p.renewal_date
@@ -114,7 +114,7 @@ export default async function PositionsPage() {
                               ? "Unknown"
                               : "Reading terms…"}
                       </td>
-                      <td className="px-7 py-5 text-slate-800">
+                      <td className="px-7 py-5 text-neutral-800">
                         {p.has_trial === false
                           ? "Free plan"
                           : p.renewal_price_cents == null

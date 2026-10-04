@@ -73,7 +73,7 @@ function matches(f: Filter, r: Row): boolean {
 }
 
 export default async function InboxPage({ searchParams }: PageProps<"/inbox">) {
-  const header = <PageHeader title="Inbox" subtitle="Emails from your StopLoss address, organized into positions." />;
+  const header = <PageHeader eyebrow="StopLoss address" title="Inbox" subtitle="Emails from your StopLoss address, organized into positions." />;
   if (!has("AGENTMAIL_API_KEY")) {
     return (
       <>
@@ -124,12 +124,12 @@ export default async function InboxPage({ searchParams }: PageProps<"/inbox">) {
 
   return (
     <>
-      <PageHeader
+      <PageHeader eyebrow="StopLoss address"
         title="Inbox"
         subtitle="Emails from your StopLoss address, organized into positions."
         actions={
           <form action="/inbox" className="relative w-[320px] max-w-full">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-neutral-400" aria-hidden="true" />
             <label htmlFor="inbox-q" className="sr-only">
               Search emails
             </label>
@@ -138,7 +138,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/inbox">) {
               name="q"
               defaultValue={q}
               placeholder="Search emails..."
-              className="w-full rounded-lg border border-slate-300 bg-white py-3 pl-12 pr-4 text-[15px] outline-none focus:border-brand"
+              className="w-full rounded-lg border border-line bg-white py-3 pl-12 pr-4 text-[15px] outline-none focus:border-ink"
             />
             {filter !== "all" ? <input type="hidden" name="f" value={filter} /> : null}
           </form>
@@ -147,14 +147,14 @@ export default async function InboxPage({ searchParams }: PageProps<"/inbox">) {
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,490px)_minmax(0,1fr)]">
         <Card className="overflow-hidden">
-          <div className="flex gap-2 overflow-x-auto border-b border-slate-200 p-4">
+          <div className="flex gap-2 overflow-x-auto border-b border-line p-4">
             {FILTERS.map((f) => (
               <Link
                 key={f.key}
                 href={href({ f: f.key === "all" ? undefined : f.key, m: undefined })}
                 className={clsx(
-                  "shrink-0 rounded-lg border px-4 py-1.5 text-sm font-medium",
-                  filter === f.key ? "border-blue-200 bg-blue-50 text-brand" : "border-slate-200 text-slate-700 hover:bg-slate-50",
+                  "shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium",
+                  filter === f.key ? "border-ink bg-ink text-white" : "border-line bg-white text-neutral-700 hover:bg-neutral-50",
                 )}
               >
                 {f.label}
@@ -162,11 +162,11 @@ export default async function InboxPage({ searchParams }: PageProps<"/inbox">) {
             ))}
           </div>
           {rows.length === 0 ? (
-            <p className="px-6 py-12 text-center text-slate-500">
+            <p className="px-6 py-12 text-center text-muted">
               {items.length === 0 ? `No mail yet. Start a trial with ${address}.` : "No emails match."}
             </p>
           ) : (
-            <ul className="max-h-[72vh] divide-y divide-slate-200 overflow-y-auto">
+            <ul className="max-h-[72vh] divide-y divide-line overflow-y-auto">
               {rows.map((r) => {
                 const b = badge(r.record);
                 return (
@@ -174,19 +174,19 @@ export default async function InboxPage({ searchParams }: PageProps<"/inbox">) {
                     <Link
                       href={href({ m: r.message_id })}
                       aria-current={r.message_id === selectedId ? "true" : undefined}
-                      className={clsx("flex gap-4 px-5 py-4", r.message_id === selectedId ? "bg-blue-50/70" : "hover:bg-slate-50")}
+                      className={clsx("flex gap-4 px-5 py-4", r.message_id === selectedId ? "bg-brand-soft" : "hover:bg-neutral-50")}
                     >
                       <ServiceLogo name={r.name} domain={r.domain} />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-3">
-                          <span className="truncate font-semibold text-slate-900">{r.name}</span>
-                          <span className="shrink-0 text-sm text-slate-500">{inboxStamp(r.received_at)}</span>
+                          <span className="truncate font-semibold text-ink">{r.name}</span>
+                          <span className="shrink-0 text-sm text-muted">{inboxStamp(r.received_at)}</span>
                         </div>
                         <div className="mt-0.5 flex items-start justify-between gap-3">
-                          <span className="truncate text-[15px] text-slate-800">{r.subject}</span>
+                          <span className="truncate text-[15px] text-neutral-800">{r.subject}</span>
                         </div>
                         <div className="mt-1 flex items-center justify-between gap-3">
-                          <span className="truncate text-sm text-slate-500">{r.preview}</span>
+                          <span className="truncate text-sm text-muted">{r.preview}</span>
                           <Pill tone={b.tone}>{b.label}</Pill>
                         </div>
                       </div>
@@ -205,14 +205,14 @@ export default async function InboxPage({ searchParams }: PageProps<"/inbox">) {
                 <div className="flex items-center gap-4">
                   <ServiceLogo name={selectedRow.name} domain={selectedRow.domain} />
                   <div>
-                    <div className="text-lg font-semibold text-slate-900">{selectedRow.name}</div>
-                    <div className="text-[15px] text-slate-500">to {message.to.join(", ") || address}</div>
+                    <div className="text-lg font-semibold text-ink">{selectedRow.name}</div>
+                    <div className="text-[15px] text-muted">to {message.to.join(", ") || address}</div>
                   </div>
                 </div>
-                <span className="text-[15px] text-slate-500">{dayTime(message.received_at)}</span>
+                <span className="text-[15px] text-muted">{dayTime(message.received_at)}</span>
               </div>
-              <h2 className="mt-6 text-[28px] font-bold tracking-tight text-slate-900">{message.subject}</h2>
-              <div className="mt-4 overflow-hidden rounded-lg border border-slate-100">
+              <h2 className="mt-6 text-[28px] font-bold tracking-tight text-ink">{message.subject}</h2>
+              <div className="mt-4 overflow-hidden rounded-lg border border-line">
                 {message.html ? (
                   <iframe
                     title={`Email: ${message.subject}`}
@@ -221,7 +221,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/inbox">) {
                     className="block h-[420px] w-full bg-white"
                   />
                 ) : (
-                  <div className="max-h-[420px] overflow-auto whitespace-pre-wrap p-5 text-[16px] leading-relaxed text-slate-800">
+                  <div className="max-h-[420px] overflow-auto whitespace-pre-wrap p-5 text-[16px] leading-relaxed text-neutral-800">
                     {message.text}
                   </div>
                 )}
@@ -229,7 +229,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/inbox">) {
               <Extracted record={record} linkedName={linked?.service_name ?? null} positionId={linked?.id ?? null} />
             </>
           ) : (
-            <p className="py-16 text-center text-slate-500">Select an email.</p>
+            <p className="py-16 text-center text-muted">Select an email.</p>
           )}
         </Card>
       </div>
@@ -240,7 +240,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/inbox">) {
 function Extracted({ record, linkedName, positionId }: { record: InboxEmail | null; linkedName: string | null; positionId: string | null }) {
   if (!record) {
     return (
-      <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-5 text-[15px] text-slate-600">
+      <div className="mt-6 rounded-xl border border-line bg-neutral-50 p-5 text-[15px] text-muted">
         StopLoss hasn’t processed this email. It only acts on mail that arrives through the webhook.
       </div>
     );
@@ -254,7 +254,7 @@ function Extracted({ record, linkedName, positionId }: { record: InboxEmail | nu
   return (
     <div className="mt-6 overflow-hidden rounded-xl border border-emerald-200">
       <div className="flex items-center justify-between gap-3 bg-emerald-50/60 px-5 py-4">
-        <div className="flex items-center gap-3 font-semibold text-slate-900">
+        <div className="flex items-center gap-3 font-semibold text-ink">
           <Sparkles className="h-5 w-5 text-emerald-600" aria-hidden="true" />
           StopLoss extracted
         </div>
@@ -266,27 +266,27 @@ function Extracted({ record, linkedName, positionId }: { record: InboxEmail | nu
       <div className="grid gap-x-8 gap-y-4 px-5 py-5 sm:grid-cols-2">
         {fields.map(([k, v]) => (
           <div key={k}>
-            <div className="text-sm text-slate-500">{k}</div>
-            <div className="mt-0.5 font-semibold text-slate-900">{v}</div>
+            <div className="text-sm text-muted">{k}</div>
+            <div className="mt-0.5 font-semibold text-ink">{v}</div>
           </div>
         ))}
         {x.cancel_url ? (
           <div>
-            <div className="text-sm text-slate-500">Cancel path</div>
-            <a href={x.cancel_url} target="_blank" rel="noreferrer" className="mt-0.5 inline-flex items-center gap-1.5 break-all font-medium text-brand hover:underline">
+            <div className="text-sm text-muted">Cancel path</div>
+            <a href={x.cancel_url} target="_blank" rel="noreferrer" className="mt-0.5 inline-flex items-center gap-1.5 break-all font-medium text-ink underline decoration-neutral-300 underline-offset-4 hover:decoration-ink">
               {x.cancel_url.replace(/^https?:\/\//, "")}
               <ExternalLink className="h-4 w-4 shrink-0" aria-hidden="true" />
             </a>
           </div>
         ) : null}
         <div>
-          <div className="text-sm text-slate-500">Position</div>
+          <div className="text-sm text-muted">Position</div>
           {positionId ? (
-            <Link href={`/positions/${positionId}`} className="mt-0.5 inline-block font-medium text-brand hover:underline">
+            <Link href={`/positions/${positionId}`} className="mt-0.5 inline-block font-medium text-ink underline decoration-neutral-300 underline-offset-4 hover:decoration-ink">
               {linkedName}
             </Link>
           ) : (
-            <div className="mt-0.5 font-medium text-slate-700">None</div>
+            <div className="mt-0.5 font-medium text-neutral-700">None</div>
           )}
         </div>
       </div>

@@ -1,18 +1,14 @@
-import { ArrowRight, Bell, CreditCard, Eye, FileText, Info, Mail } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
+import { getCardStatus } from "@/cards";
 import { has } from "@/config";
 import { stopLossAddress } from "@/inbox";
 import { CopyButton } from "@/surface/CopyButton";
-import { buttonClass, Card } from "@/surface/ui";
+import { CardArt, EnvelopeArt, HeroArt, ToggleArt, TrackArt } from "@/surface/home/HomeArt";
+import { buttonClass, Card, Eyebrow, linkClass } from "@/surface/ui";
 
 export const dynamic = "force-dynamic";
-
-const STEPS = [
-  { icon: Mail, title: "Use your StopLoss email", body: "Sign up for trials with your unique StopLoss email address." },
-  { icon: Eye, title: "We watch the trial", body: "We track the renewal date, pricing, and subscription details." },
-  { icon: Bell, title: "We ask before cancelling", body: "Before you're charged, we'll ask you once and give you a chance to keep it." },
-  { icon: FileText, title: "We send proof", body: "The service's cancellation email becomes the proof that closes the trial." },
-];
 
 async function address(): Promise<string | null> {
   if (!has("AGENTMAIL_API_KEY")) return null;
@@ -23,94 +19,81 @@ async function address(): Promise<string | null> {
   }
 }
 
-export default async function HomePage() {
-  const email = await address();
+function Step({ n, art, title, body }: { n: number; art: ReactNode; title: string; body: string }) {
   return (
-    <div className="max-w-[1180px]">
-      <h1 className="max-w-[640px] text-[44px] font-bold leading-[1.08] tracking-tight text-slate-900 md:text-[56px]">
-        Try software without surprise charges.
-      </h1>
-      <p className="mt-5 max-w-[660px] text-xl leading-relaxed text-slate-500">
-        Use your StopLoss email when you start a free trial. We track the renewal, protect your downside, and ask
-        before cancelling.
-      </p>
+    <Card className="flex flex-col p-6">
+      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-soft text-[13px] font-semibold text-ink">{n}</span>
+      <div className="-mx-6 flex h-[176px] items-center justify-center overflow-hidden px-6">{art}</div>
+      <h2 className="mt-2 text-[18px] font-semibold tracking-tight text-ink">{title}</h2>
+      <p className="mt-1.5 text-[15px] leading-relaxed text-muted">{body}</p>
+    </Card>
+  );
+}
 
-      <div className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,560px)]">
-        <ol className="relative flex flex-col gap-10">
-          {STEPS.map(({ icon: Icon, title, body }, i) => (
-            <li key={title} className="relative flex gap-6">
-              {i < STEPS.length - 1 ? (
-                <span className="absolute left-8 top-16 h-[calc(100%-1rem)] border-l border-dashed border-slate-300" aria-hidden="true" />
-              ) : null}
-              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-brand">
-                <Icon className="h-7 w-7" strokeWidth={1.75} aria-hidden="true" />
-              </span>
-              <span className="mt-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
-                {i + 1}
-              </span>
-              <div className="mt-1.5">
-                <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
-                <p className="mt-1 max-w-sm text-[17px] leading-relaxed text-slate-500">{body}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
+export default async function HomePage() {
+  const [email, card] = await Promise.all([address(), getCardStatus().catch(() => null)]);
+  const cardsOn = card?.state === "connected";
 
-        <div className="flex flex-col gap-6">
-          <Card className="p-7">
-            <div className="flex gap-5">
-              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-brand">
-                <Mail className="h-7 w-7" strokeWidth={1.75} aria-hidden="true" />
-              </span>
-              <div>
-                <h2 className="flex items-center gap-2 text-[22px] font-semibold text-slate-900">
-                  Your StopLoss email
-                  <span title="Every trial you start with this address is tracked." className="text-slate-400">
-                    <Info className="h-5 w-5" aria-label="Every trial you start with this address is tracked." />
-                  </span>
-                </h2>
-                <p className="mt-1 text-[16px] text-slate-500">Use this email when you start a free trial.</p>
-              </div>
-            </div>
+  return (
+    <div className="mx-auto max-w-[1280px]">
+      <section className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,540px)]">
+        <div className="min-w-0">
+          <Eyebrow>Trials without surprises</Eyebrow>
+          <h1 className="mt-5 text-[44px] font-bold leading-[1.02] tracking-[-0.045em] text-ink sm:text-[58px] xl:text-[68px]">
+            Try software without surprise charges.
+          </h1>
+          <p className="mt-6 max-w-[560px] text-[19px] leading-relaxed text-muted">
+            Use your StopLoss email and a single-use virtual card to start trials. We track the renewal, protect your downside, and ask
+            before cancelling.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href="/positions" className={buttonClass.primary + " px-7 py-3.5 text-base"}>
+              Get started
+              <ArrowRight className="h-5 w-5" aria-hidden="true" />
+            </Link>
+            <a href="#how" className={buttonClass.secondary + " px-7 py-3.5 text-base"}>
+              See how it works
+            </a>
+          </div>
+
+          <div className="mt-10 max-w-[560px] rounded-2xl border border-line bg-white p-4 shadow-soft">
+            <div className="text-[12px] font-medium uppercase tracking-[0.18em] text-muted">Your StopLoss email</div>
             {email ? (
-              <div className="mt-6 flex gap-3">
-                <div className="flex min-w-0 flex-1 items-center rounded-lg bg-slate-100 px-5 py-3 text-[19px] text-slate-900">
-                  <span className="truncate">{email}</span>
-                </div>
-                <CopyButton value={email} />
+              <div className="mt-2 flex items-center gap-3">
+                <span className="min-w-0 flex-1 truncate font-mono text-[16px] text-ink">{email}</span>
+                <CopyButton value={email} compact />
               </div>
             ) : (
-              <p className="mt-6 rounded-lg bg-amber-50 px-5 py-4 text-[15px] text-amber-900">
-                Add <code className="font-mono text-sm">AGENTMAIL_API_KEY</code> to <code className="font-mono text-sm">.env.local</code> and
-                StopLoss creates your address on the next page load.
+              <p className="mt-2 text-[15px] text-muted">
+                Add <code className="font-mono text-sm">AGENTMAIL_API_KEY</code> to create your address.
               </p>
             )}
-          </Card>
-
-          <Card className="p-7">
-            <div className="flex gap-5">
-              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-brand">
-                <CreditCard className="h-7 w-7" strokeWidth={1.75} aria-hidden="true" />
-              </span>
-              <div>
-                <h2 className="text-[22px] font-semibold text-slate-900">Single-use virtual card</h2>
-                <p className="mt-1 text-[16px] text-slate-500">A new card for each trial StopLoss signs up for.</p>
-              </div>
+            <div className="mt-3 flex items-center gap-2 border-t border-line pt-3 text-[14px]">
+              <span className={cardsOn ? "h-2 w-2 rounded-full bg-emerald-500" : "h-2 w-2 rounded-full bg-neutral-300"} aria-hidden="true" />
+              {cardsOn ? (
+                <span className="text-ink">Single-use cards on</span>
+              ) : (
+                <Link href="/settings#cards" className={linkClass}>
+                  Connect your Link wallet
+                </Link>
+              )}
             </div>
-            <p className="mt-6 rounded-lg bg-slate-100 px-5 py-4 text-[15px] text-slate-600">
-              No card source connected yet. Kernel fills cards from a wallet provider such as Link by Stripe.
-            </p>
-            <Link href="/settings" className="mt-3 inline-block text-[15px] font-medium text-brand hover:underline">
-              Card settings
-            </Link>
-          </Card>
+          </div>
         </div>
-      </div>
+        <HeroArt email={email} />
+      </section>
 
-      <Link href="/positions" className={buttonClass.primary + " mt-12 px-20 py-4 text-lg"}>
-        Get started
-        <ArrowRight className="h-5 w-5" aria-hidden="true" />
-      </Link>
+      <section id="how" className="mt-16 grid scroll-mt-24 grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <Step n={1} art={<EnvelopeArt email={email} />} title="Use your StopLoss email" body="Sign up for trials with your unique StopLoss email address." />
+        <Step
+          n={2}
+          art={<CardArt />}
+          title="We provide a virtual card"
+          body="Each trial StopLoss signs up for gets its own single-use card, so a renewal has nothing to charge."
+        />
+        <Step n={3} art={<TrackArt />} title="We track the trial" body="We monitor renewal dates, pricing, and subscription details." />
+        <Step n={4} art={<ToggleArt />} title="We ask before cancelling" body="Before you’re charged, we’ll ask you once and give you a chance to keep it." />
+      </section>
     </div>
   );
 }

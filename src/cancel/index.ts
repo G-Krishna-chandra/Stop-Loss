@@ -2,17 +2,18 @@
 import { advanceRun, getRun, updateRun } from "@/db";
 import type { CancelOutcome, CancelResult, Position, RunStep } from "@/types";
 import { type AgentHooks, type AgentOutcome, runBrowserAgent } from "./agent";
+export type { CardFieldBinding } from "./agent";
 import { type Browser, closeBrowser, openBrowser } from "./kernel";
 
 // Reuses the browser a paused run left open (the user signed in or entered a card there), or opens a new one.
-async function browserFor(runId: string, domain: string, saveProfile: boolean, resume: boolean): Promise<Browser> {
+async function browserFor(runId: string, domain: string, saveProfile: boolean, resume: boolean, vault?: string): Promise<Browser> {
   const run = await getRun(runId);
   const now = new Date().toISOString();
   if (resume && run?.browser_session_id) {
     await updateRun(runId, { status: "running", error: null, invoked_at: now });
     return { sessionId: run.browser_session_id, liveViewUrl: run.live_view_url, replayId: null };
   }
-  const browser = await openBrowser(domain, { saveProfile });
+  const browser = await openBrowser(domain, { saveProfile, vault });
   await updateRun(runId, { live_view_url: browser.liveViewUrl, browser_session_id: browser.sessionId, status: "running", error: null, invoked_at: now });
   return browser;
 }
@@ -117,10 +118,10 @@ export type SignupResult = { outcome: AgentOutcome; detail: string; replayUrl: s
 export async function runSignup(
   runId: string,
   target: { url: string; name: string; domain: string; email: string; fullName: string; offer: string },
-  hooks: Pick<AgentHooks, "emailLogin">,
-  opts: { resume?: boolean } = {},
+  hooks: Pick<AgentHooks, "emailLogin" | "payWithCard">,
+  opts: { resume?: boolean; vault?: string } = {},
 ): Promise<SignupResult> {
-  const browser = await browserFor(runId, target.domain, true, Boolean(opts.resume));
+  const browser = await browserFor(runId, target.domain, true, Boolean(opts.resume), opts.vault);
   if (!opts.resume) await advanceRun(runId, "create_account");
   const since = new Date((await getRun(runId))?.started_at ?? Date.now());
 
@@ -131,7 +132,11 @@ ${SAFETY}
 - Use "sign up with email", never Google, Apple, phone, or another single sign-on.
 - If the site emails a verification link or code, use use_email_login.
 - After the account exists, find and start the free trial of the paid plan (often "Start free trial", "Try Pro free", or on the pricing or upgrade page).
-- If starting the trial asks for a payment card, stop on that page and finish with needs_card. The user will enter it.
+${
+    hooks.payWithCard
+      ? "- If starting the trial asks for a payment card, open the card form and call pay_with_virtual_card once. StopLoss issues a single-use card capped at $1 and fills it; you never see the number. Then submit the form once. If the tool says the user still has to approve the card, finish with needs_card. If the fill fails, finish with failed; never try again."
+      : "- If starting the trial asks for a payment card, stop on that page and finish with needs_card. The user will enter it."
+  }
 - If the account exists but the service offers no free trial of a paid plan (only a free plan), finish with no_trial. A free account is not a trial.
 - Finish with done only when a free trial of a paid plan is active.`;
 

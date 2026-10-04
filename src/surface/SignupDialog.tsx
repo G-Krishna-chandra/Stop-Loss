@@ -57,9 +57,9 @@ function SignupDialog({ canRun, onClose }: { canRun: boolean; onClose: () => voi
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-4" onKeyDown={(e) => e.key === "Escape" && !busy && onClose()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/55 p-4" onKeyDown={(e) => e.key === "Escape" && !busy && onClose()}>
       <div role="dialog" aria-modal="true" aria-labelledby="signup-title" className="relative w-full max-w-[510px] rounded-2xl bg-white p-8 shadow-2xl">
-        <button type="button" onClick={onClose} aria-label="Close" className="absolute right-5 top-5 rounded-md p-1.5 text-slate-500 hover:bg-slate-100">
+        <button type="button" onClick={onClose} aria-label="Close" className="absolute right-5 top-5 rounded-md p-1.5 text-muted hover:bg-neutral-100">
           <X className="h-5 w-5" />
         </button>
 
@@ -70,11 +70,11 @@ function SignupDialog({ canRun, onClose }: { canRun: boolean; onClose: () => voi
               if (domain) setConfirming(true);
             }}
           >
-            <h2 id="signup-title" className="text-[26px] font-bold tracking-tight text-slate-900">
+            <h2 id="signup-title" className="text-[26px] font-bold tracking-tight text-ink">
               Sign up for a trial
             </h2>
-            <p className="mt-2 text-slate-500">Name the product’s website. You’ll review the details before StopLoss starts.</p>
-            <label htmlFor="signup-url" className="mt-6 block text-sm font-medium text-slate-700">
+            <p className="mt-2 text-muted">Name the product’s website. You’ll review the details before StopLoss starts.</p>
+            <label htmlFor="signup-url" className="mt-6 block text-sm font-medium text-neutral-700">
               Website
             </label>
             <input
@@ -83,7 +83,7 @@ function SignupDialog({ canRun, onClose }: { canRun: boolean; onClose: () => voi
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="gamma.app"
-              className="mt-1.5 w-full rounded-lg border border-slate-300 px-4 py-3 text-[16px] outline-none focus:border-brand focus:ring-2 focus:ring-blue-100"
+              className="mt-1.5 w-full rounded-lg border border-line px-4 py-3 text-[16px] outline-none focus:border-ink focus:ring-2 focus:ring-neutral-200"
             />
             <div className="mt-7 flex justify-end gap-3">
               <button type="button" onClick={onClose} className={buttonClass.secondary}>
@@ -99,14 +99,14 @@ function SignupDialog({ canRun, onClose }: { canRun: boolean; onClose: () => voi
             <div className="flex items-center gap-4">
               <ServiceLogo name={name} domain={domain!} />
               <div>
-                <div className="text-lg font-semibold text-slate-900">{name}</div>
-                <div className="text-slate-500">{domain}</div>
+                <div className="text-lg font-semibold text-ink">{name}</div>
+                <div className="text-muted">{domain}</div>
               </div>
             </div>
-            <h2 id="signup-title" className="mt-7 text-[28px] font-bold leading-tight tracking-tight text-slate-900">
+            <h2 id="signup-title" className="mt-7 text-[28px] font-bold leading-tight tracking-tight text-ink">
               Have StopLoss sign up for {name}?
             </h2>
-            <p className="mt-3 text-[17px] text-slate-600">
+            <p className="mt-3 text-[17px] text-muted">
               StopLoss will create the account, start the trial, and track the renewal for you.
             </p>
             <ul className="mt-6 flex flex-col gap-4">
@@ -116,7 +116,7 @@ function SignupDialog({ canRun, onClose }: { canRun: boolean; onClose: () => voi
                 "Start the free trial in a live browser you can watch",
                 "Ask before cancelling",
               ].map((t) => (
-                <li key={t} className="flex items-center gap-3 text-[17px] text-slate-700">
+                <li key={t} className="flex items-center gap-3 text-[17px] text-neutral-700">
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand text-white">
                     <Check className="h-4 w-4" strokeWidth={3} aria-hidden="true" />
                   </span>

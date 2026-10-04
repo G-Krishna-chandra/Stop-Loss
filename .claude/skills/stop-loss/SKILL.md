@@ -22,7 +22,7 @@ In scope: ONE end-to-end loop that works on real accounts.
 - e. On approval, the agent cancels inside the logged-in account. Several positions can cancel in parallel.
 - f. The cancellation email arrives in the agent inbox and closes the position.
 
-Out of scope today: importing existing subscriptions, bank linking, and multi-user accounts. Agent sign-up with a per-trial virtual card comes after the loop works, and depends on a card source the team has not picked yet.
+Out of scope today: importing existing subscriptions, bank linking, and multi-user accounts. Agent sign-up pays with a per-trial single-use Link card through Kernel (see section 5).
 
 Target services for the live cancel: TBD by 1:00 PM. Pick two or three services, test all of them, and ideally pick services on the same billing portal.
 
@@ -68,7 +68,10 @@ For development and testing, resolve approvals with a CLI script or a plain HTTP
 - **Kernel:** browser sessions that cancel inside the logged-in account. Must support several sessions at once. Expose a live view URL per session.
 - **Mastra:** the agent, and a workflow that suspends at approval and resumes after.
 - **Neon:** Postgres for positions and events, and the scheduled stop check.
-- **Assistant UI:** available for whatever surface the team picks. Not committed yet.
+- **Kernel Link wallet (virtual cards):** each agent sign-up gets its own single-use Link by Stripe card, capped at $1, approved by the user in Link and filled by Kernel's `fill` API. Card numbers never enter our app, logs, database, or the model. Code lives in `src/cards/`.
+- **ElevenLabs Agents:** the always-on voice assistant. `npm run voice:setup` creates the agent; `/api/voice/token` mints conversation tokens server-side.
+- **Neon AI Gateway:** the models (Claude) for email reading and the browser agent, through `@neon/ai-sdk-provider` in `src/llm.ts`.
+- **Assistant UI:** not used.
 - **Language:** TypeScript.
 
 RULE: these SDKs are new. Before using any of them, read the official docs page for the exact call. Never guess an API from memory.

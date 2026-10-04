@@ -1,6 +1,7 @@
 // The StopLoss agent: reacts to inbound email, sets stops, and runs cancels and sign-ups after approval.
 // It may call other modules through their index.ts (skill section 6). Long work runs in after() from src/app.
-import { CANCEL_STEPS, runCancel, runSignup, SIGNUP_STEPS } from "@/cancel";
+import { CANCEL_STEPS, type CardFieldBinding, runCancel, runSignup, SIGNUP_STEPS } from "@/cancel";
+import { fillCard, getCardStatus, requestCard, vaultName, waitForCard } from "@/cards";
 import { requestApproval } from "@/approval";
 import {
   addEvent,
@@ -270,6 +271,55 @@ function describeOffer(name: string, t: Terms): string {
   return `${length}${plan}${after}.`;
 }
 
+const cardKey = (runId: string) => `trial-${runId}`;
+
+// Issues this run's single-use Link card (once), waits a bounded time for the user's approval in Link, then has
+// Kernel fill it into the checkout. The model only ever sees the messages returned here.
+function payWithCardFor(runId: string, serviceName: string) {
+  return async ({ pageUrl, bindings }: { pageUrl: string; bindings: CardFieldBinding[] }): Promise<string> => {
+    let origin: string;
+    try {
+      const u = new URL(pageUrl);
+      if (u.protocol !== "https:") return "The checkout page isn't https, so the single-use card can't be used here.";
+      origin = u.origin;
+    } catch {
+      return "Couldn't read the checkout page address.";
+    }
+    const key = cardKey(runId);
+    let progress = await requestCard({
+      key,
+      merchantName: serviceName,
+      merchantUrl: origin,
+      amountCents: 100,
+      context:
+        `Start a free trial of ${serviceName} at ${origin}. No charge is expected today; the card is capped at $1.00 ` +
+        "for a verification. It is for this one trial sign-up only and must not be used for the renewal or any later charge.",
+    }).catch((err: unknown) => ({ state: "failed" as const, detail: err instanceof Error ? err.message : "Link error" }));
+
+    if (progress.state === "awaiting_approval") {
+      await updateRun(runId, { card_note: "Approve the $1.00 single-use card in Link to continue.", card_action_url: progress.approvalUrl });
+      await advanceRun(runId, "payment", "Waiting for you to approve the single-use card in Link");
+      for (let i = 0; i < 3 && progress.state === "awaiting_approval"; i++) {
+        progress = await waitForCard(key, 60).catch(() => progress);
+      }
+      if (progress.state === "awaiting_approval") {
+        return "The user hasn't approved the card in Link yet. Finish with needs_card so they can approve it and press Continue.";
+      }
+    }
+    await updateRun(runId, { card_note: null, card_action_url: null });
+    if (progress.state === "failed") return `The single-use card couldn't be issued: ${progress.detail} Finish with needs_card.`;
+
+    await advanceRun(runId, "payment", `Filling single-use card${progress.last4 ? ` •••• ${progress.last4}` : ""}, capped at $1`);
+    const browserId = (await getRun(runId))?.browser_session_id;
+    if (!browserId) return "The browser session is gone. Finish with failed.";
+    const filled = await fillCard({ key, browserId, pageUrl, bindings });
+    if (filled.status === "completed") {
+      return `Card filled${progress.last4 ? ` (•••• ${progress.last4})` : ""}. Check the form, then submit it once.`;
+    }
+    return `The card fill ended ${filled.status} (${filled.detail}). Do not retry. Finish with failed and say what happened.`;
+  };
+}
+
 function failSteps(run: AgentRun | null, detail: string) {
   return (run?.steps ?? []).map((s) => (s.status === "active" ? { ...s, status: "failed" as const, detail } : s));
 }
@@ -292,19 +342,22 @@ export async function executeSignup(runId: string, opts: { resume?: boolean } = 
   const offer = terms ? describeOffer(run.service_name, terms) : "Not found. Look for a free trial on the pricing page.";
   if (!opts.resume) await advanceRun(runId, "research", `Found ${offer}`, "done");
 
+  const cardsOn = (await getCardStatus()).state === "connected";
   const result = await runSignup(
     runId,
     { url: url.toString(), name: run.service_name, domain, email, fullName: process.env.STOPLOSS_FULL_NAME ?? "StopLoss User", offer },
-    { emailLogin: emailLoginFor(domain) },
-    opts,
+    { emailLogin: emailLoginFor(domain), ...(cardsOn ? { payWithCard: payWithCardFor(runId, run.service_name) } : {}) },
+    { ...opts, ...(cardsOn ? { vault: vaultName() } : {}) },
   );
 
   if (result.outcome === "done") {
+    const card = cardsOn ? await waitForCard(cardKey(runId), 1).catch(() => null) : null;
     const { position, created } = await openPosition({
       service_name: run.service_name,
       service_domain: domain,
       signup_email: email,
       created_by: "signup_run",
+      card_last4: card && card.state !== "failed" ? card.last4 : null,
     });
     if (created) await addEvent(position.id, "position_opened", "Trial started", `StopLoss started ${offer}`, { run_id: runId });
     await advanceRun(runId, "position", "Position created", "done");

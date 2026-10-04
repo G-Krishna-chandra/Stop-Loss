@@ -80,6 +80,10 @@ create table if not exists agent_runs (
 -- When the current attempt began. A Vercel function stops after maxDuration, so a run still "running" long after
 -- this is treated as interrupted and paused for the user to continue.
 alter table agent_runs add column if not exists invoked_at timestamptz not null default now();
+-- Link single-use card approval for a sign-up run: where the user approves, and what to tell them.
+alter table agent_runs add column if not exists card_action_url text;
+alter table agent_runs add column if not exists card_note text;
+
 -- Runs are history: deleting a position keeps its runs and only clears the link.
 alter table agent_runs drop constraint if exists agent_runs_position_id_fkey;
 alter table agent_runs add constraint agent_runs_position_id_fkey

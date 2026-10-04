@@ -129,6 +129,9 @@ export type AgentRun = {
   started_at: string;
   invoked_at: string;
   finished_at: string | null;
+  // Set while a sign-up waits for the user to approve its single-use card in Link.
+  card_note: string | null;
+  card_action_url: string | null;
 };
 
 export type EmailCategory =

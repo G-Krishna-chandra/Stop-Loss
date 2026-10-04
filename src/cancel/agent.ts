@@ -8,11 +8,65 @@ import { run } from "./kernel";
 
 export type AgentOutcome = "done" | "retention_offer" | "needs_login" | "needs_card" | "no_trial" | "failed";
 
+export type CardFieldName = "number" | "expiration" | "exp_month" | "exp_year" | "cvc" | "billing_name" | "billing_postal_code";
+export type CardFieldBinding = { field: CardFieldName; selector: string };
+
 export type AgentHooks = {
   onStep: (key: string, detail: string) => Promise<void>;
   // Returns a login code or sign-in link that arrived at the StopLoss address after `since`, or null.
   emailLogin: (since: Date) => Promise<{ code: string | null; link: string | null }>;
+  // Issues a single-use Link card and fills it into these fields. Returns a message for the model; never the card.
+  payWithCard?: (input: { pageUrl: string; bindings: CardFieldBinding[] }) => Promise<string>;
 };
+
+// Lists visible inputs in every frame, including cross-origin payment iframes (Stripe Elements, Adyen, Braintree).
+const CARD_INPUTS = `
+const out = [];
+for (const frame of page.frames()) {
+  try {
+    const inputs = await frame.$$eval('input', (els) => els
+      .filter((e) => { const r = e.getBoundingClientRect(); return e.type !== 'hidden' && r.width > 1 && r.height > 1; })
+      .map((e) => ({
+        name: e.getAttribute('name') || '', id: e.id || '',
+        ac: (e.getAttribute('autocomplete') || '').toLowerCase(),
+        hint: ((e.getAttribute('placeholder') || '') + ' ' + (e.getAttribute('aria-label') || '')).toLowerCase(),
+        stripe: e.getAttribute('data-elements-stable-field-name') || '',
+      })));
+    out.push(...inputs);
+  } catch (e) {}
+}
+return out;`;
+
+type CardInput = { name: string; id: string; ac: string; hint: string; stripe: string };
+
+const CARD_RULES: [CardFieldName, (i: CardInput) => boolean][] = [
+  ["number", (i) => i.ac === "cc-number" || i.stripe === "cardNumber" || i.id === "cardNumber" || /^(cardnumber|card-number|card_number|number|ccnumber)$/i.test(i.name) || /card number/.test(i.hint)],
+  ["expiration", (i) => i.ac === "cc-exp" || i.stripe === "cardExpiry" || i.id === "cardExpiry" || /^(exp-date|expiry|exp|expiration|exp_date|cardexpiry)$/i.test(i.name) || /mm ?\/ ?yy/.test(i.hint)],
+  ["exp_month", (i) => i.ac === "cc-exp-month"],
+  ["exp_year", (i) => i.ac === "cc-exp-year"],
+  ["cvc", (i) => i.ac === "cc-csc" || i.stripe === "cardCvc" || i.id === "cardCvc" || /^(cvc|cvv|cvc2|cardcvc|security-code|securitycode)$/i.test(i.name) || /\b(cvc|cvv|security code)\b/.test(i.hint)],
+  ["billing_postal_code", (i) => i.ac === "postal-code" || i.stripe === "postalCode" || i.id === "billingPostalCode" || /^(postal|postalcode|postal_code|zip|zipcode|billingpostalcode)$/i.test(i.name)],
+  ["billing_name", (i) => i.ac === "cc-name" || i.id === "billingName" || /^(billingname|cardholder-name|cardholdername|ccname|name_on_card)$/i.test(i.name)],
+];
+
+function selectorFor(i: CardInput): string | null {
+  const q = (v: string) => v.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  if (i.id) return `input[id="${q(i.id)}"]`;
+  if (i.name) return `input[name="${q(i.name)}"]`;
+  if (i.ac) return `input[autocomplete="${q(i.ac)}"]`;
+  return null;
+}
+
+// Maps found inputs to card fields with code, not the model, so the model never chooses where card data goes.
+export function cardBindings(inputs: CardInput[]): CardFieldBinding[] {
+  const out: CardFieldBinding[] = [];
+  for (const [field, test] of CARD_RULES) {
+    const match = inputs.find((i) => test(i) && selectorFor(i));
+    if (match) out.push({ field, selector: selectorFor(match)! });
+  }
+  // A combined expiry and split month/year never both go in.
+  return out.some((b) => b.field === "expiration") ? out.filter((b) => b.field !== "exp_month" && b.field !== "exp_year") : out;
+}
 
 const LOOK = `
 const elements = await page.evaluate(() => {
@@ -154,6 +208,23 @@ export async function runBrowserAgent(input: {
         return "Reported.";
       },
     }),
+    ...(hooks.payWithCard
+      ? {
+          pay_with_virtual_card: tool({
+            description:
+              "On the trial's payment form, StopLoss issues a single-use card (capped at $1) from the user's Link wallet and fills the card fields itself. You never see the card. Call it once per checkout, after the card form is visible. Then submit the form once.",
+            inputSchema: z.object({}),
+            execute: async () => {
+              const bindings = cardBindings(await run<CardInput[]>(sessionId, CARD_INPUTS));
+              if (!bindings.some((b) => b.field === "number")) {
+                return "No card number field is visible. Open or scroll to the card form, then call this again.";
+              }
+              const pageUrl = await run<string>(sessionId, "return page.url();");
+              return hooks.payWithCard!({ pageUrl, bindings });
+            },
+          }),
+        }
+      : {}),
     finish: tool({
       description: "End the task with an outcome and a one-sentence explanation for the user.",
       inputSchema: z.object({

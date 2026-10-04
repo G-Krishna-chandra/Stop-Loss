@@ -23,10 +23,10 @@ function isActive(href: string, path: string): boolean {
 export function Sidebar() {
   const path = usePathname();
   return (
-    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-neutral-200 bg-white px-3 py-6 text-neutral-600 md:flex">
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-line bg-white px-3 py-6 text-neutral-600 md:flex">
       <Link href="/" className="mb-9 flex items-center gap-2.5 px-3">
         <Logo />
-        <span className="text-[21px] font-semibold tracking-tight text-black">StopLoss</span>
+        <span className="text-[21px] font-semibold tracking-tight text-ink">StopLoss</span>
       </Link>
       <nav className="flex flex-col gap-1" aria-label="Main">
         {NAV.map(({ href, label, icon: Icon }) => {
@@ -37,8 +37,8 @@ export function Sidebar() {
               href={href}
               aria-current={active ? "page" : undefined}
               className={clsx(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] font-medium transition-colors",
-                active ? "bg-black text-white" : "hover:bg-neutral-100 hover:text-black",
+                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium transition-colors",
+                active ? "bg-brand-soft text-ink" : "hover:bg-neutral-50 hover:text-ink",
               )}
             >
               <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
@@ -55,14 +55,14 @@ export function Sidebar() {
 export function MobileNav() {
   const path = usePathname();
   return (
-    <nav className="flex gap-1 overflow-x-auto border-b border-slate-200 bg-white px-4 py-2 md:hidden" aria-label="Main">
+    <nav className="flex gap-1 overflow-x-auto border-b border-line bg-white px-4 py-2 md:hidden" aria-label="Main">
       {NAV.map(({ href, label }) => (
         <Link
           key={href}
           href={href}
           className={clsx(
             "shrink-0 rounded-md px-3 py-1.5 text-sm font-medium",
-            isActive(href, path) ? "bg-slate-900 text-white" : "text-slate-600",
+            isActive(href, path) ? "bg-brand-soft text-ink" : "text-neutral-600",
           )}
         >
           {label}

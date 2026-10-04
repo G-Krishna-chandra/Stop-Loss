@@ -97,7 +97,7 @@ Actions:
 - If the user asks for something StopLoss can't do, say so plainly.`;
 
 const FIRST_MESSAGE = "Hi, it's StopLoss. I can tell you what's renewing, what the browser agent is doing, or start a sign-up. What do you need?";
-const VOICE_ID = process.env.ELEVENLABS_VOICE_ID || "kdmDKE6EkgrWrrykO9Qt";
+const VOICE_ID = process.env.ELEVENLABS_VOICE_ID || "cjVigY5qzO86Huf0OWal";
 
 async function pickLlm() {
   const preferred = ["gemini-2.5-flash", "claude-sonnet-4-5", "gpt-5.2", "gpt-4.1"];

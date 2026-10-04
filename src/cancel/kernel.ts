@@ -30,7 +30,7 @@ async function profileExists(name: string): Promise<boolean> {
 export type Browser = { sessionId: string; liveViewUrl: string | null; replayId: string | null };
 
 // Opens a headful stealth browser. saveProfile creates the service's profile if needed and saves the session into it.
-export async function openBrowser(domain: string, opts: { saveProfile: boolean }): Promise<Browser> {
+export async function openBrowser(domain: string, opts: { saveProfile: boolean; vault?: string }): Promise<Browser> {
   const name = profileName(domain);
   let useProfile = await profileExists(name);
   if (!useProfile && opts.saveProfile) {
@@ -42,6 +42,8 @@ export async function openBrowser(domain: string, opts: { saveProfile: boolean }
     headless: false,
     timeout_seconds: 900,
     ...(useProfile ? { profile: { name, save_changes: opts.saveProfile } } : {}),
+    // The Link card vault, so Kernel can fill a single-use card into this browser's checkout.
+    ...(opts.vault ? { vaults: [{ name: opts.vault }] } : {}),
   });
   let replayId: string | null = null;
   try {

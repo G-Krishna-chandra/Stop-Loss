@@ -8,10 +8,10 @@ const SIZES = { sm: "h-10 w-10 text-base", md: "h-12 w-12 text-lg", lg: "h-[88px
 // The service's favicon, or its first letter when the icon cannot load.
 export function ServiceLogo({ name, domain, size = "md" }: { name: string; domain: string; size?: keyof typeof SIZES }) {
   const [failed, setFailed] = useState(false);
-  const box = clsx("flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white", SIZES[size]);
+  const box = clsx("flex shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-line bg-white shadow-soft", SIZES[size]);
   if (failed || !domain) {
     return (
-      <div className={clsx(box, "bg-slate-900 font-semibold text-white")} aria-hidden="true">
+      <div className={clsx(box, "bg-ink font-semibold text-white")} aria-hidden="true">
         {name.slice(0, 1).toUpperCase()}
       </div>
     );

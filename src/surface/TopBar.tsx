@@ -13,9 +13,9 @@ async function pendingCount(): Promise<number> {
 export async function TopBar() {
   const pending = await pendingCount();
   return (
-    <header className="flex h-[68px] shrink-0 items-center justify-end gap-3 border-b border-slate-200 bg-white px-6 md:px-10">
+    <header className="flex h-[68px] shrink-0 items-center justify-end gap-3 border-b border-line bg-white/80 px-6 backdrop-blur md:px-10">
       <VoiceButton pending={pending} />
-      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white" aria-label="Signed in as KC">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-ink text-sm font-semibold text-white" aria-label="Signed in as KC">
         KC
       </div>
     </header>

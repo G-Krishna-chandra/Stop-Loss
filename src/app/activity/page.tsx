@@ -12,7 +12,7 @@ import type { AgentRun } from "@/types";
 export const dynamic = "force-dynamic";
 
 const STATUS: Record<AgentRun["status"], { label: string; cls: string }> = {
-  running: { label: "In progress", cls: "bg-blue-50 text-blue-700" },
+  running: { label: "In progress", cls: "bg-sky-50 text-sky-800" },
   paused: { label: "Needs you", cls: "bg-amber-50 text-amber-800" },
   succeeded: { label: "Done", cls: "bg-emerald-50 text-emerald-700" },
   failed: { label: "Stopped", cls: "bg-red-50 text-red-700" },
@@ -41,7 +41,7 @@ function summary(run: AgentRun): string {
 }
 
 export default async function ActivityPage() {
-  const header = <PageHeader title="Activity" subtitle="Every browser run StopLoss did, and everything it logged." />;
+  const header = <PageHeader eyebrow="Agent runs" title="Activity" subtitle="Every browser run StopLoss did, and everything it logged." />;
   if (!has("DATABASE_URL")) {
     return (
       <>
@@ -56,32 +56,32 @@ export default async function ActivityPage() {
     <>
       {header}
 
-      <h2 className="mb-3 text-xl font-semibold text-slate-900">Browser runs</h2>
+      <h2 className="mb-3 text-xl font-semibold text-ink">Browser runs</h2>
       <Card className="mb-10 overflow-hidden">
         {runs.length === 0 ? (
-          <p className="px-6 py-12 text-center text-slate-500">No runs yet. Sign up for a trial or cancel one to start a live browser run.</p>
+          <p className="px-6 py-12 text-center text-muted">No runs yet. Sign up for a trial or cancel one to start a live browser run.</p>
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-line">
             {runs.map((r) => {
               const st = STATUS[r.status];
               return (
                 <li key={r.id}>
-                  <Link href={`/runs/${r.id}`} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50">
+                  <Link href={`/runs/${r.id}`} className="flex items-center gap-4 px-6 py-4 hover:bg-neutral-50">
                     <ServiceLogo name={r.service_name} domain={domainOf(r)} size="sm" />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold text-slate-900">
+                        <span className="font-semibold text-ink">
                           {r.kind === "cancel" ? "Cancel" : "Sign-up"} · {r.service_name}
                         </span>
                         <span className={clsx("rounded-full px-2.5 py-0.5 text-xs font-medium", st.cls)}>{st.label}</span>
                       </div>
-                      <div className="mt-0.5 truncate text-[15px] text-slate-500">{summary(r)}</div>
+                      <div className="mt-0.5 truncate text-[15px] text-muted">{summary(r)}</div>
                     </div>
-                    <div className="hidden shrink-0 text-right text-sm text-slate-500 sm:block">
+                    <div className="hidden shrink-0 text-right text-sm text-muted sm:block">
                       <div>{dayTime(r.started_at)}</div>
                       <div>{duration(r)}</div>
                     </div>
-                    <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
+                    <ChevronRight className="h-5 w-5 shrink-0 text-neutral-400" aria-hidden="true" />
                   </Link>
                 </li>
               );
@@ -90,12 +90,12 @@ export default async function ActivityPage() {
         )}
       </Card>
 
-      <h2 className="mb-3 text-xl font-semibold text-slate-900">Log</h2>
+      <h2 className="mb-3 text-xl font-semibold text-ink">Log</h2>
       <Card className="overflow-hidden">
         {ledger.length === 0 ? (
-          <p className="px-6 py-12 text-center text-slate-500">Nothing has happened yet.</p>
+          <p className="px-6 py-12 text-center text-muted">Nothing has happened yet.</p>
         ) : (
-          <ol className="divide-y divide-slate-100">
+          <ol className="divide-y divide-line">
             {ledger.map((e) => {
               const runId = typeof e.payload.run_id === "string" ? e.payload.run_id : null;
               const row = (
@@ -103,16 +103,16 @@ export default async function ActivityPage() {
                   {e.service_name && e.service_domain ? (
                     <ServiceLogo name={e.service_name} domain={e.service_domain} size="sm" />
                   ) : (
-                    <span className="h-10 w-10 shrink-0 rounded-xl bg-slate-100" aria-hidden="true" />
+                    <span className="h-10 w-10 shrink-0 rounded-xl bg-brand-soft" aria-hidden="true" />
                   )}
                   <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-slate-900">
+                    <div className="font-semibold text-ink">
                       {e.title}
-                      {e.service_name ? <span className="ml-2 font-normal text-slate-500">{e.service_name}</span> : null}
+                      {e.service_name ? <span className="ml-2 font-normal text-muted">{e.service_name}</span> : null}
                     </div>
-                    {e.detail ? <div className="mt-0.5 text-[15px] text-slate-500">{e.detail}</div> : null}
+                    {e.detail ? <div className="mt-0.5 text-[15px] text-muted">{e.detail}</div> : null}
                   </div>
-                  <time className="shrink-0 text-sm text-slate-500" dateTime={e.created_at}>
+                  <time className="shrink-0 text-sm text-muted" dateTime={e.created_at}>
                     {dayTime(e.created_at)}
                   </time>
                 </>
@@ -120,7 +120,7 @@ export default async function ActivityPage() {
               return (
                 <li key={e.id}>
                   {runId ? (
-                    <Link href={`/runs/${runId}`} className="flex items-start gap-4 px-6 py-4 hover:bg-slate-50">
+                    <Link href={`/runs/${runId}`} className="flex items-start gap-4 px-6 py-4 hover:bg-neutral-50">
                       {row}
                     </Link>
                   ) : (

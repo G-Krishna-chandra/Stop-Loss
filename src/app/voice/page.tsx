@@ -11,10 +11,10 @@ export const dynamic = "force-dynamic";
 export default async function VoicePage() {
   const header = (
     <div className="mb-10 flex gap-5">
-      <Mic className="mt-2 h-9 w-9 text-slate-900" strokeWidth={1.75} aria-hidden="true" />
+      <Mic className="mt-2 h-9 w-9 text-ink" strokeWidth={1.75} aria-hidden="true" />
       <div>
-        <h1 className="text-[40px] font-bold tracking-tight text-slate-900">Voice command</h1>
-        <p className="mt-1 text-lg text-slate-500">Answer StopLoss out loud, hands-free.</p>
+        <h1 className="text-[40px] font-bold tracking-tight text-ink">Voice command</h1>
+        <p className="mt-1 text-lg text-muted">Answer StopLoss out loud, hands-free.</p>
       </div>
     </div>
   );
@@ -34,10 +34,10 @@ export default async function VoicePage() {
     return (
       <>
         {header}
-        <div className="mx-auto max-w-[730px] rounded-2xl border border-slate-200 bg-white p-12 text-center">
-          <p className="text-xl font-semibold text-slate-900">Nothing needs your answer right now.</p>
-          <p className="mt-2 text-slate-500">When a stop comes due, StopLoss asks here.</p>
-          <Link href="/positions" className="mt-6 inline-block font-medium text-brand hover:underline">
+        <div className="mx-auto max-w-[730px] rounded-2xl border border-line bg-white p-12 text-center">
+          <p className="text-xl font-semibold text-ink">Nothing needs your answer right now.</p>
+          <p className="mt-2 text-muted">When a stop comes due, StopLoss asks here.</p>
+          <Link href="/positions" className="mt-6 inline-block font-medium text-ink underline decoration-neutral-300 underline-offset-4 hover:decoration-ink">
             See positions
           </Link>
         </div>
@@ -60,7 +60,7 @@ export default async function VoicePage() {
       {header}
       <VoicePrompt approvalId={first.id} prompt={prompt} />
       {pending.length > 1 ? (
-        <p className="mt-6 text-center text-[15px] text-slate-500">{pending.length - 1} more waiting after this one.</p>
+        <p className="mt-6 text-center text-[15px] text-muted">{pending.length - 1} more waiting after this one.</p>
       ) : null}
     </>
   );

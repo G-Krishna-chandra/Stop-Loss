@@ -10,7 +10,6 @@ import {
   ExternalLink,
   FileText,
   Globe,
-  Info,
   Mail,
   RotateCcw,
 } from "lucide-react";
@@ -25,7 +24,7 @@ import { day, dayTime, money, price } from "@/surface/format";
 import { ServiceLogo } from "@/surface/ServiceLogo";
 import { SetupNeeded } from "@/surface/SetupNeeded";
 import { Trace } from "@/surface/Timeline";
-import { buttonClass, Card, CardTitle, DetailRows, StatusPill } from "@/surface/ui";
+import { buttonClass, Card, CardTitle, DetailRows, Note, StatusPill } from "@/surface/ui";
 import type { Position } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -80,7 +79,7 @@ export default async function PositionPage({ params, searchParams }: PageProps<"
 
   return (
     <div className="max-w-[1180px]">
-      <Link href="/positions" className="inline-flex items-center gap-2 text-[16px] text-slate-600 hover:text-slate-900">
+      <Link href="/positions" className="inline-flex items-center gap-2 text-[16px] text-muted hover:text-ink">
         <ArrowLeft className="h-5 w-5" aria-hidden="true" />
         Back to positions
       </Link>
@@ -90,10 +89,10 @@ export default async function PositionPage({ params, searchParams }: PageProps<"
           <ServiceLogo name={position.service_name} domain={position.service_domain} size="lg" />
           <div>
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-[40px] font-bold leading-tight tracking-tight text-slate-900">{position.service_name}</h1>
+              <h1 className="text-[40px] font-bold leading-tight tracking-tight text-ink">{position.service_name}</h1>
               <StatusPill status={position.status} large />
             </div>
-            <p className="mt-1 text-lg text-slate-500">{position.product_blurb ?? origin(position)}</p>
+            <p className="mt-1 text-lg text-muted">{position.product_blurb ?? origin(position)}</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -114,7 +113,7 @@ export default async function PositionPage({ params, searchParams }: PageProps<"
 
       <StatusBanner position={position} runId={run?.id ?? null} replayUrl={run?.replay_url ?? null} />
 
-      <nav className="mt-8 flex gap-2 border-b border-slate-200" aria-label="Position sections">
+      <nav className="mt-8 flex gap-2 border-b border-line" aria-label="Position sections">
         {TABS.map((t) => (
           <Link
             key={t}
@@ -122,7 +121,7 @@ export default async function PositionPage({ params, searchParams }: PageProps<"
             aria-current={tab === t ? "page" : undefined}
             className={clsx(
               "-mb-px border-b-2 px-6 pb-3 text-[17px] font-medium capitalize",
-              tab === t ? "border-brand text-brand" : "border-transparent text-slate-600 hover:text-slate-900",
+              tab === t ? "border-brand text-brand" : "border-transparent text-muted hover:text-ink",
             )}
           >
             {t}
@@ -154,17 +153,17 @@ export default async function PositionPage({ params, searchParams }: PageProps<"
               <CardTitle icon={CalendarDays}>Upcoming renewal</CardTitle>
               {noTrial ? (
                 <>
-                  <div className="text-[32px] font-bold tracking-tight text-slate-900">No renewal</div>
-                  <p className="mt-1 text-[17px] text-slate-500">
+                  <div className="text-[32px] font-bold tracking-tight text-ink">No renewal</div>
+                  <p className="mt-1 text-[17px] text-muted">
                     This account is on a free plan, so nothing renews and there is nothing at risk.
                   </p>
                 </>
               ) : !position.renewal_date ? (
                 <>
-                  <div className="text-[32px] font-bold tracking-tight text-slate-900">
+                  <div className="text-[32px] font-bold tracking-tight text-ink">
                     {position.terms_checked_at ? "Unknown" : "Reading terms…"}
                   </div>
-                  <p className="mt-1 text-[17px] text-slate-500">
+                  <p className="mt-1 text-[17px] text-muted">
                     {position.terms_checked_at
                       ? "StopLoss couldn’t find when this trial ends, so no stop is set yet."
                       : "StopLoss is reading the trial terms."}
@@ -172,19 +171,15 @@ export default async function PositionPage({ params, searchParams }: PageProps<"
                 </>
               ) : (
                 <>
-              <div className="text-[32px] font-bold tracking-tight text-slate-900">{day(position.renewal_date)}</div>
-              <p className="mt-1 text-[17px] text-slate-500">Your trial will convert to a paid subscription.</p>
-              <div className="mt-5 flex gap-4 rounded-xl bg-blue-50 p-5">
-                <Info className="mt-0.5 h-6 w-6 shrink-0 text-brand" aria-hidden="true" />
-                <div>
-                  <div className="font-semibold text-blue-800">StopLoss will ask before cancelling.</div>
-                  <p className="mt-1 text-[15px] text-slate-600">
-                    {position.stop_at ? `The stop is set for ${dayTime(position.stop_at)}. ` : ""}When it’s time, we’ll confirm with you
-                    before taking action.
-                  </p>
-                </div>
+              <div className="text-[32px] font-bold tracking-tight text-ink">{day(position.renewal_date)}</div>
+              <p className="mt-1 text-[17px] text-muted">Your trial will convert to a paid subscription.</p>
+              <div className="mt-5">
+                <Note title="StopLoss will ask before cancelling.">
+                  {position.stop_at ? `The stop is set for ${dayTime(position.stop_at)}. ` : ""}When it’s time, we’ll confirm with you before
+                  taking action.
+                </Note>
               </div>
-              <div className="mt-5 border-t border-slate-100 pt-4">
+              <div className="mt-5 border-t border-line pt-4">
                 <DetailRows rows={[["Renews at", price(position.renewal_price_cents, position.currency, position.billing_period)]]} />
               </div>
                 </>
@@ -211,32 +206,32 @@ export default async function PositionPage({ params, searchParams }: PageProps<"
           <Card className="p-6">
             <CardTitle icon={Globe}>Research sources</CardTitle>
             {position.source_urls.length === 0 ? (
-              <p className="text-slate-500">No sources yet.</p>
+              <p className="text-muted">No sources yet.</p>
             ) : (
               <ul className="flex flex-col gap-3">
                 {position.source_urls.map((u) => (
                   <li key={u}>
-                    <a href={u} target="_blank" rel="noreferrer" className="break-all text-[15px] text-brand hover:underline">
+                    <a href={u} target="_blank" rel="noreferrer" className="break-all text-[15px] text-ink underline decoration-neutral-300 underline-offset-4 hover:decoration-ink">
                       {u}
                     </a>
                   </li>
                 ))}
               </ul>
             )}
-            {position.cancel_policy ? <p className="mt-5 text-[15px] text-slate-600">{position.cancel_policy}</p> : null}
+            {position.cancel_policy ? <p className="mt-5 text-[15px] text-muted">{position.cancel_policy}</p> : null}
           </Card>
           {run ? (
             <Card className="p-6 lg:col-span-2">
               <CardTitle icon={RotateCcw}>Browser sessions</CardTitle>
-              <div className="flex flex-wrap items-center gap-4 text-[15px] text-slate-700">
+              <div className="flex flex-wrap items-center gap-4 text-[15px] text-neutral-700">
                 <span>
                   {run.kind === "cancel" ? "Cancel" : "Sign-up"} run · {dayTime(run.started_at)} · {run.status}
                 </span>
-                <Link href={`/runs/${run.id}`} className="font-medium text-brand hover:underline">
+                <Link href={`/runs/${run.id}`} className="font-medium text-ink underline decoration-neutral-300 underline-offset-4 hover:decoration-ink">
                   Open run
                 </Link>
                 {run.replay_url ? (
-                  <a href={run.replay_url} target="_blank" rel="noreferrer" className="font-medium text-brand hover:underline">
+                  <a href={run.replay_url} target="_blank" rel="noreferrer" className="font-medium text-ink underline decoration-neutral-300 underline-offset-4 hover:decoration-ink">
                     View replay
                   </a>
                 ) : null}
@@ -257,21 +252,21 @@ export default async function PositionPage({ params, searchParams }: PageProps<"
 }
 
 function EmailList({ emails }: { emails: Awaited<ReturnType<typeof emailsForPosition>> }) {
-  if (emails.length === 0) return <p className="text-slate-500">No emails yet.</p>;
+  if (emails.length === 0) return <p className="text-muted">No emails yet.</p>;
   return (
-    <ul className="divide-y divide-slate-100">
+    <ul className="divide-y divide-line">
       {emails.map((e) => (
         <li key={e.message_id}>
           <Link href={`/inbox?m=${encodeURIComponent(e.message_id)}`} className="flex items-center gap-4 py-4">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-slate-700">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-ink">
               <Mail className="h-6 w-6" strokeWidth={1.75} aria-hidden="true" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-semibold text-slate-900">{e.subject}</span>
-              <span className="block truncate text-[15px] text-slate-500">From: {e.from_address}</span>
+              <span className="block truncate font-semibold text-ink">{e.subject}</span>
+              <span className="block truncate text-[15px] text-muted">From: {e.from_address}</span>
             </span>
-            <span className="shrink-0 text-[15px] text-slate-600">{day(e.received_at)}</span>
-            <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
+            <span className="shrink-0 text-[15px] text-muted">{day(e.received_at)}</span>
+            <ChevronRight className="h-5 w-5 shrink-0 text-neutral-400" aria-hidden="true" />
           </Link>
         </li>
       ))}
@@ -282,22 +277,22 @@ function EmailList({ emails }: { emails: Awaited<ReturnType<typeof emailsForPosi
 function StatusBanner({ position, runId, replayUrl }: { position: Position; runId: string | null; replayUrl: string | null }) {
   if (position.status === "closed") {
     return (
-      <div className="mt-8 grid gap-6 rounded-2xl border border-emerald-300 bg-emerald-50/70 p-7 md:grid-cols-[1fr_auto_auto] md:items-center">
+      <div className="mt-8 grid gap-6 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-7 shadow-soft md:grid-cols-[1fr_auto_auto] md:items-center">
         <div className="flex items-center gap-5">
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
             <CheckCircle2 className="h-10 w-10 text-emerald-600" aria-hidden="true" />
           </span>
           <div>
-            <div className="text-2xl font-semibold text-slate-900">Cancellation confirmed</div>
-            <div className="mt-1 text-[17px] text-slate-600">Your subscription has been cancelled.</div>
+            <div className="text-2xl font-semibold text-ink">Cancellation confirmed</div>
+            <div className="mt-1 text-[17px] text-muted">Your subscription has been cancelled.</div>
           </div>
         </div>
         <div className="border-emerald-200 md:border-l md:px-10">
-          <div className="text-[15px] text-slate-600">Ended on</div>
-          <div className="mt-1 text-[28px] font-bold text-slate-900">{day(position.closed_at)}</div>
+          <div className="text-[15px] text-muted">Ended on</div>
+          <div className="mt-1 text-[28px] font-bold text-ink">{day(position.closed_at)}</div>
         </div>
         <div className="border-emerald-200 md:border-l md:px-10">
-          <div className="text-[15px] text-slate-600">Saved</div>
+          <div className="text-[15px] text-muted">Saved</div>
           <div className="mt-1 text-[32px] font-bold text-emerald-600">
             {price(position.renewal_price_cents, position.currency, position.billing_period)}
           </div>
@@ -307,8 +302,8 @@ function StatusBanner({ position, runId, replayUrl }: { position: Position; runI
   }
   if (position.status === "approved" || position.status === "cancelling") {
     return (
-      <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-blue-200 bg-blue-50 p-6">
-        <div className="text-[17px] text-slate-800">StopLoss is cancelling {position.service_name} in a live browser.</div>
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-white p-6 shadow-soft">
+        <div className="text-[17px] text-neutral-800">StopLoss is cancelling {position.service_name} in a live browser.</div>
         {runId ? (
           <Link href={`/runs/${runId}`} className={buttonClass.primary}>
             Watch it live
@@ -323,8 +318,8 @@ function StatusBanner({ position, runId, replayUrl }: { position: Position; runI
         <div className="flex gap-4">
           <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 text-amber-600" aria-hidden="true" />
           <div>
-            <div className="font-semibold text-slate-900">StopLoss couldn’t confirm the cancel</div>
-            <p className="mt-1 text-[15px] text-slate-600">
+            <div className="font-semibold text-ink">StopLoss couldn’t confirm the cancel</div>
+            <p className="mt-1 text-[15px] text-muted">
               {position.status_reason ?? "The result was unclear."} StopLoss did not retry on its own. Still at risk:{" "}
               {money(position.renewal_price_cents, position.currency)} on {day(position.renewal_date)}.
             </p>
@@ -340,7 +335,7 @@ function StatusBanner({ position, runId, replayUrl }: { position: Position; runI
   }
   if (position.status === "kept") {
     return (
-      <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 text-[17px] text-slate-700">
+      <div className="mt-8 rounded-2xl border border-line bg-white p-6 text-[17px] text-neutral-700 shadow-soft">
         You’re keeping {position.service_name}. It renews on {day(position.renewal_date)} for{" "}
         {price(position.renewal_price_cents, position.currency, position.billing_period)}. StopLoss won’t touch it again.
       </div>
@@ -368,29 +363,29 @@ async function ClosedOverview({
         >
           <span className="flex items-center gap-3">
             Proof email
-            <Mail className="h-5 w-5 text-slate-600" aria-hidden="true" />
+            <Mail className="h-5 w-5 text-muted" aria-hidden="true" />
             <span className="rounded-full bg-emerald-50 px-3 py-0.5 text-sm font-medium text-emerald-700">Verified</span>
           </span>
         </CardTitle>
         {proof ? (
           <>
-            <p className="-mt-2 mb-5 text-[16px] text-slate-500">We received a confirmation email from {position.service_name}.</p>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+            <p className="-mt-2 mb-5 text-[16px] text-muted">We received a confirmation email from {position.service_name}.</p>
+            <div className="rounded-xl border border-line bg-neutral-50 p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <ServiceLogo name={position.service_name} domain={position.service_domain} size="sm" />
                   <div>
-                    <div className="font-semibold text-slate-900">{position.service_name}</div>
-                    <div className="text-sm text-slate-500">{proof.from}</div>
+                    <div className="font-semibold text-ink">{position.service_name}</div>
+                    <div className="text-sm text-muted">{proof.from}</div>
                   </div>
                 </div>
-                <div className="text-sm text-slate-500">{dayTime(proof.at)}</div>
+                <div className="text-sm text-muted">{dayTime(proof.at)}</div>
               </div>
-              <div className="mt-4 border-t border-slate-200 pt-4 text-[15px]">
-                <span className="text-slate-500">Subject: </span>
-                <span className="text-slate-900">{proof.subject}</span>
+              <div className="mt-4 border-t border-line pt-4 text-[15px]">
+                <span className="text-muted">Subject: </span>
+                <span className="text-ink">{proof.subject}</span>
               </div>
-              <div className="mt-4 max-h-72 overflow-auto whitespace-pre-wrap rounded-lg bg-white p-5 text-[15px] leading-relaxed text-slate-800">
+              <div className="mt-4 max-h-72 overflow-auto whitespace-pre-wrap rounded-lg bg-white p-5 text-[15px] leading-relaxed text-neutral-800">
                 {proof.text}
               </div>
             </div>
@@ -405,18 +400,18 @@ async function ClosedOverview({
                   View replay
                 </a>
               ) : (
-                <span className={buttonClass.secondary + " cursor-default text-slate-400"}>No replay</span>
+                <span className={buttonClass.secondary + " cursor-default text-neutral-400"}>No replay</span>
               )}
             </div>
           </>
         ) : (
-          <p className="text-slate-500">The proof email is not available.</p>
+          <p className="text-muted">The proof email is not available.</p>
         )}
       </Card>
       <div className="flex flex-col gap-6">
         <Card className="p-6">
           <CardTitle>Activity summary</CardTitle>
-          <p className="-mt-2 mb-5 text-[16px] text-slate-500">Here’s what happened.</p>
+          <p className="-mt-2 mb-5 text-[16px] text-muted">Here’s what happened.</p>
           <Trace items={trace.slice(-3)} times={dayTime} />
         </Card>
         <Card className="p-6">

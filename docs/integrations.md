@@ -82,3 +82,24 @@ Sources: neon.com/docs/ai-gateway/get-started.md, /docs/ai-gateway/models.md, np
 ## Local mail without a public URL
 
 `npm run inbox:listen` subscribes to the StopLoss inbox over AgentMail WebSockets (`client.websockets.connect()`, then `sendSubscribe({ type: "subscribe", inboxIds, eventTypes })`). It forwards each `message.received` to the local webhook route. The route accepts unsigned events only when `NODE_ENV` is not production and `ALLOW_UNSIGNED_WEBHOOKS=1`.
+
+## Kernel Link wallet (single-use cards)
+
+Sources: kernel.sh/docs integrations/wallets/stripe-link.md, integrations/wallets/overview.md, vaults/fill.md
+
+- Setup: one vault (`STOPLOSS_VAULT_NAME`, default `stoploss-user`) holds one Link wallet, `link-wallet`. Create it with `kernel.vaults.items.upsert(key, { type: "wallet", spec: { provider: "link", authorization: { method: "oauth", client: { type: "kernel_managed" } } } })`. While its state is `pending_authorization`, `action.url` is the hosted Link sign-in that the user opens.
+- Issuing a card, once per sign-up run: the card is keyed `trial-<runId>`, with `amount` in cents (1 to 50000; we use 100) and a `merchant_url` set to the checkout page's https origin. `context` must be at least 100 characters.
+  - Call `authorize` once, then wait for `ready`. A `spend_approval` action has a URL; `push_approval` means approving in the Link app.
+- Filling: `performOperation(key, { type: "fill", browser_id, page_url, fields: [{ field, selector }] })`.
+  - `page_url` must share the origin of `merchant_url`.
+  - `expiration` needs `format: "MM/YY"`.
+  - Never retry a fill or an authorize. A missing billing field returns `field_unavailable` before anything is written to the page, so we retry once with card fields only.
+- Rules: browsers that fill need `vaults: [{ name }]` at creation. Link runs live only and needs a US phone number. Keep action URLs out of model context.
+
+## ElevenLabs Agents (voice)
+
+Sources: elevenlabs.io/docs eleven-agents libraries/react, api-reference (agents, tools, conversations/token), customization/events
+
+- Browser: `@elevenlabs/react` provides `ConversationProvider`, `useConversationControls` (`startSession`, `sendContextualUpdate`, `sendUserMessage`, `endSession`), `useConversationClientTool(name, handler)`, and `useConversationStatus` / `useConversationMode` / `useConversationInput`.
+- Server: `GET https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=...` with the `xi-api-key` header returns `{ token }`. Start a session with `startSession({ conversationToken, connectionType: "webrtc" })`.
+- Agent setup: `POST /v1/convai/tools` creates client tools (`expects_response: true`). `POST /v1/convai/agents/create` with `conversation_config.agent.prompt.tool_ids` and `platform_settings.auth.enable_auth: true`. Conversations are capped by `max_duration_seconds` (we use 1800).
