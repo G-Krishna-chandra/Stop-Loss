@@ -15,7 +15,8 @@
     "inbox:dev": "tsx --env-file=.env scripts/inbox-dev-server.ts",
     "inbox:fake": "tsx --env-file=.env scripts/send-test-webhook.ts",
     "db:migrate": "tsx --env-file=.env scripts/db-migrate.ts",
-    "approvals": "tsx --env-file=.env scripts/approvals.ts"
+    "approvals": "tsx --env-file=.env scripts/approvals.ts",
+    "check:env": "tsx scripts/check-env.ts"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
