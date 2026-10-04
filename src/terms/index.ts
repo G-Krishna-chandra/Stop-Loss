@@ -197,7 +197,7 @@ export async function findTrials(topic: string): Promise<TrialPick[]> {
   const res = await exa.search(`${topic} that offer a free trial of a paid plan`, {
     type: "deep",
     systemPrompt:
-      "List products in this category that currently let new customers start a free trial of a paid plan. " +
+      "List distinct products in this category that currently let new customers start a free trial of a paid plan, one entry per product. " +
       "Prefer the best-known, most widely used products in the category over small or new ones. " +
       "Use each vendor's own pricing or help pages. Leave out products that only have a free plan. At most 6. " +
       "If a trial length or price can't be verified, return null for it; never guess.",
@@ -232,7 +232,8 @@ export async function findTrials(topic: string): Promise<TrialPick[]> {
       plan: str(t.plan),
       price_after_trial: str(t.price_after_trial),
     }))
-    .filter((t) => t.product)
+    // The model sometimes lists one product once per plan; keep the first entry for each.
+    .filter((t, i, all) => t.product && all.findIndex((o) => o.product.toLowerCase() === t.product.toLowerCase()) === i)
     .slice(0, 6);
 }
 
