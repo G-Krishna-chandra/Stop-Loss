@@ -62,10 +62,13 @@ function str(v: unknown): string | null {
 async function fromWeb(name: string, domain: string): Promise<{ terms: Partial; sources: string[] }> {
   if (!process.env.EXA_API_KEY) return { terms: EMPTY, sources: [] };
   const exa = new Exa(process.env.EXA_API_KEY);
-  const res = await exa.search(`${name} free trial length, price after the trial, and how to cancel the subscription`, {
-    type: "deep-lite",
-    includeDomains: [domain],
-    systemPrompt: "Use the vendor's official pricing, billing, and help pages. Describe the paid plan a new free trial converts to.",
+  // Per the build-with-exa skill: retrieval intent in the query, source and verification rules in systemPrompt,
+  // and type "deep" because the fields live on different pages (pricing vs. cancel help).
+  const res = await exa.search(`${name} (${domain}) free trial length, price after the trial, and how to cancel the subscription`, {
+    type: "deep",
+    systemPrompt:
+      `Use ${domain}'s own pricing, billing, and help center pages. Ignore resellers, reviews, and coupon sites. ` +
+      "Describe the paid plan a new free trial converts to. If a value cannot be verified from a page, return null; never guess.",
     outputSchema: EXA_SCHEMA,
     contents: { highlights: true },
   });
