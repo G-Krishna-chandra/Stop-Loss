@@ -3,9 +3,8 @@
 import { generateText, isStepCount, tool } from "ai";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
+import { model } from "@/llm";
 import { run } from "./kernel";
-
-const AGENT_MODEL = process.env.AGENT_MODEL ?? "anthropic/claude-sonnet-5.5";
 
 export type AgentOutcome = "done" | "retention_offer" | "needs_login" | "needs_card" | "failed";
 
@@ -163,7 +162,7 @@ export async function runBrowserAgent(input: {
   };
 
   await generateText({
-    model: AGENT_MODEL,
+    model: model("agent"),
     instructions: input.instructions,
     prompt: `${input.task}\n\nThe browser is open at ${input.startUrl}. Start with look.`,
     tools,

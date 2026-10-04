@@ -9,9 +9,11 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "db:migrate": "node --env-file-if-exists=.env.local scripts/migrate.mjs",
-    "approve": "node --env-file-if-exists=.env.local scripts/approve.mjs"
+    "approve": "node --env-file-if-exists=.env.local scripts/approve.mjs",
+    "inbox:listen": "node --env-file-if-exists=.env.local scripts/listen.mjs"
   },
   "dependencies": {
+    "@neon/ai-sdk-provider": "^1.0.0",
     "@neondatabase/serverless": "^1.2.0",
     "@onkernel/sdk": "^0.119.0",
     "agentmail": "^0.5.35",

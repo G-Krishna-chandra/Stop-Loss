@@ -69,9 +69,16 @@ Sources: neon.com/docs/serverless/serverless-driver, /guides/nextjs, /connect/co
 - Querying: `neon(DATABASE_URL)` returns a tagged-template function, and its parameters are escaped. Timestamps come back as `Date`.
 - Connection strings: use the pooled string (`-pooler`) in the app, and the direct string for migrations.
 
-## AI SDK and AI Gateway
+## Models: Neon AI Gateway
 
-Sources: ai-sdk.dev/docs/migration-guides/migration-guide-7-0, /docs/ai-sdk-core/generating-structured-data, vercel.com/docs/ai-gateway
+Sources: neon.com/docs/ai-gateway/get-started.md, /docs/ai-gateway/models.md, npm `@neon/ai-sdk-provider` README
 
-- AI SDK 7 needs Node 22 or later (this repo pins Node 24 in `.nvmrc`). A plain `"provider/model"` string routes through the gateway using `AI_GATEWAY_API_KEY`.
-- Structured output: call `generateText({ model, output: Output.object({ schema }), prompt })`. `generateObject` is deprecated.
+- Credentials come from the branch's AI Gateway tab in the Neon console: `NEON_AI_GATEWAY_BASE_URL` (branch-scoped host) and `NEON_AI_GATEWAY_TOKEN`.
+- `src/llm.ts` calls `createNeon({ baseURL, apiKey })(modelId)` from `@neon/ai-sdk-provider`, which works with AI SDK 6 and 7.
+- Claude ids are `claude-sonnet-5`, `claude-haiku-4-5`, and `claude-opus-5-5`. Claude goes through the Anthropic Messages route, which supports tools and structured output.
+- `GET $NEON_AI_GATEWAY_BASE_URL/v1/models` lists the models your branch serves.
+- AI SDK 7 needs Node 22 or later, and this repo pins Node 24. For structured output, use `generateText({ model, output: Output.object({ schema }) })`.
+
+## Local mail without a public URL
+
+`npm run inbox:listen` subscribes to the StopLoss inbox over AgentMail WebSockets (`client.websockets.connect()`, then `sendSubscribe({ type: "subscribe", inboxIds, eventTypes })`). It forwards each `message.received` to the local webhook route. The route accepts unsigned events only when `NODE_ENV` is not production and `ALLOW_UNSIGNED_WEBHOOKS=1`.
