@@ -1,9 +1,9 @@
 import clsx from "clsx";
-import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { has } from "@/config";
 import { listLedger, listRuns, pauseStaleRuns } from "@/db";
 import { dayTime } from "@/surface/format";
+import { RunMenu } from "@/surface/RunMenu";
 import { ServiceLogo } from "@/surface/ServiceLogo";
 import { SetupNeeded } from "@/surface/SetupNeeded";
 import { Card, PageHeader } from "@/surface/ui";
@@ -52,12 +52,14 @@ export default async function ActivityPage() {
   }
   await pauseStaleRuns();
   const [runs, ledger] = await Promise.all([listRuns(), listLedger(100)]);
+  // Log entries only link to runs that still exist.
+  const runIds = new Set(runs.map((r) => r.id));
   return (
     <>
       {header}
 
       <h2 className="mb-3 text-xl font-semibold text-ink">Browser runs</h2>
-      <Card className="mb-10 overflow-hidden">
+      <Card className="mb-10">
         {runs.length === 0 ? (
           <p className="px-6 py-12 text-center text-muted">No runs yet. Sign up for a trial or cancel one to start a live browser run.</p>
         ) : (
@@ -65,8 +67,8 @@ export default async function ActivityPage() {
             {runs.map((r) => {
               const st = STATUS[r.status];
               return (
-                <li key={r.id}>
-                  <Link href={`/runs/${r.id}`} className="flex items-center gap-4 px-6 py-4 hover:bg-neutral-50">
+                <li key={r.id} className="flex items-center gap-2 pr-4 first:rounded-t-2xl last:rounded-b-2xl hover:bg-neutral-50">
+                  <Link href={`/runs/${r.id}`} className="flex min-w-0 flex-1 items-center gap-4 py-4 pl-6">
                     <ServiceLogo name={r.service_name} domain={domainOf(r)} size="sm" />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
@@ -81,8 +83,8 @@ export default async function ActivityPage() {
                       <div>{dayTime(r.started_at)}</div>
                       <div>{duration(r)}</div>
                     </div>
-                    <ChevronRight className="h-5 w-5 shrink-0 text-neutral-400" aria-hidden="true" />
                   </Link>
+                  <RunMenu runId={r.id} positionId={r.position_id} live={r.status === "running" || r.status === "paused"} />
                 </li>
               );
             })}
@@ -97,7 +99,7 @@ export default async function ActivityPage() {
         ) : (
           <ol className="divide-y divide-line">
             {ledger.map((e) => {
-              const runId = typeof e.payload.run_id === "string" ? e.payload.run_id : null;
+              const runId = typeof e.payload.run_id === "string" && runIds.has(e.payload.run_id) ? e.payload.run_id : null;
               const row = (
                 <>
                   {e.service_name && e.service_domain ? (

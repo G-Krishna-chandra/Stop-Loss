@@ -64,6 +64,11 @@ export async function pauseStaleRuns(): Promise<void> {
     where status = 'running' and invoked_at < now() - interval '320 seconds'`;
 }
 
+export async function deleteRun(id: string): Promise<AgentRun | null> {
+  const rows = await sql()`delete from agent_runs where id = ${id} returning *`;
+  return rows[0] ? toRun(rows[0]) : null;
+}
+
 export async function listRuns(limit = 100): Promise<AgentRun[]> {
   const rows = await sql()`select * from agent_runs order by started_at desc limit ${limit}`;
   return rows.map(toRun);

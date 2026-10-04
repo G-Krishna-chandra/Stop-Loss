@@ -20,6 +20,11 @@ async function browserFor(runId: string, domain: string, saveProfile: boolean, r
 
 const step = (key: string, title: string, detail: string): RunStep => ({ key, title, detail, status: "pending", at: null });
 
+// Shuts a run's Kernel browser for good, for example when the run is deleted while it's still open.
+export async function endBrowser(sessionId: string): Promise<void> {
+  await closeBrowser({ sessionId, replayId: null }).catch(() => undefined);
+}
+
 export const CANCEL_STEPS: RunStep[] = [
   step("open_account", "Opening account page", "Signing in to your account"),
   step("billing", "Navigating to billing", "Opening settings and billing"),
