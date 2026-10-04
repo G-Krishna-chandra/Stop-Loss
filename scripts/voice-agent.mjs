@@ -62,10 +62,16 @@ const TOOLS = [
     parameters: { type: "object", properties: { position_id: str("The position id from get_status") }, required: ["position_id"] },
   },
   {
+    name: "research_trial",
+    description:
+      "Look up a product by name: its official website, whether it has a free trial, how long, which plan, and the price after the trial. Use it whenever the user names a product. Never ask the user for a URL.",
+    parameters: { type: "object", properties: { product: str("The product's name or website, like ChatGPT or notion.so") }, required: ["product"] },
+  },
+  {
     name: "start_signup",
     description:
-      "Have StopLoss sign up for a product's free trial in a live browser, using the user's StopLoss email. Confirm the website with the user first. StopLoss checks that a real trial exists before creating an account.",
-    parameters: { type: "object", properties: { website: str("The product's website, like notion.so") }, required: ["website"] },
+      "Have StopLoss sign up for a product's free trial in a live browser with the user's StopLoss email and a single-use card. Pass the product name; StopLoss finds the website. Only after the user said yes to starting it.",
+    parameters: { type: "object", properties: { product: str("The product's name or website, like ChatGPT or notion.so") }, required: ["product"] },
   },
   {
     name: "continue_run",
@@ -78,6 +84,7 @@ const PROMPT = `You are StopLoss, the voice assistant inside the StopLoss web ap
 
 How to talk:
 - Short, plain sentences. One or two per turn unless the user asks for detail.
+- Silence is normal. The user is usually watching the browser work. When there is nothing new to say, call skip_turn and stay quiet. Never ask whether the user is still there, and never fill a pause with chatter.
 - Say money and dates the way a person would, like "twenty dollars a month" and "October twelfth".
 - Never read ids aloud. Use ids only in tool calls.
 
@@ -88,7 +95,8 @@ What you know:
 
 Actions:
 - open_page, open_run, open_position move the user's screen when they ask to see something.
-- start_signup: confirm the website out loud first, then call it.
+- When the user names a product ("sign up for ChatGPT"), do not ask for a URL. Call research_trial, tell them the trial in one sentence (for example "ChatGPT has a four-day trial of Plus, then twenty dollars a month. Start it?"), and after a yes call start_signup with the product name.
+- If research_trial finds no free trial, say so and only sign up if the user still wants to.
 - continue_run: when a run is paused and the user says they finished signing in or entering a card.
 - Cancelling needs an explicit yes, every time:
   - For a waiting approval, say the service, the price, and when it renews, then ask "Cancel it?". Call answer_approval with decision "approve" only after a clear yes. A clear no or "keep it" is decision "decline". If the answer is unclear, ask again. Never decide for the user.
@@ -118,10 +126,19 @@ function agentConfig(llm, toolIds) {
       agent: {
         first_message: FIRST_MESSAGE,
         language: "en",
-        prompt: { prompt: PROMPT, llm, temperature: 0.2, ...(toolIds ? { tool_ids: toolIds } : {}) },
+        prompt: {
+          prompt: PROMPT,
+          llm,
+          temperature: 0.2,
+          ...(toolIds ? { tool_ids: toolIds } : {}),
+          built_in_tools: {
+            skip_turn: { type: "system", name: "skip_turn", description: "", params: { system_tool_type: "skip_turn" } },
+          },
+        },
       },
       tts: { voice_id: VOICE_ID },
-      turn: { turn_timeout: 7, silence_end_call_timeout: -1 },
+      // Patient turn-taking and the longest silence window; skip_turn lets it stay quiet when there's nothing to add.
+      turn: { turn_timeout: 30, silence_end_call_timeout: -1, turn_eagerness: "patient" },
       conversation: { max_duration_seconds: 1800 },
     },
     platform_settings: { auth: { enable_auth: true } },
@@ -132,20 +149,44 @@ const llm = await pickLlm();
 const existing = process.env.ELEVENLABS_AGENT_ID;
 const update = process.argv.includes("--update");
 
+const toolBody = (t) => ({
+  tool_config: { type: "client", name: t.name, description: t.description, expects_response: true, response_timeout_secs: 60, parameters: t.parameters },
+});
+
 if (existing && update) {
-  await api(`/v1/convai/agents/${existing}`, { method: "PATCH", body: JSON.stringify(agentConfig(llm, null)) });
-  console.log(`Updated agent ${existing} (llm ${llm}, voice ${VOICE_ID}).`);
+  // Sync tools by name: update the ones the agent already has, create the missing ones.
+  const agent = await api(`/v1/convai/agents/${existing}`);
+  const currentIds = agent?.conversation_config?.agent?.prompt?.tool_ids ?? [];
+  const byName = new Map();
+  for (const id of currentIds) {
+    try {
+      const tool = await api(`/v1/convai/tools/${id}`);
+      if (tool?.tool_config?.name) byName.set(tool.tool_config.name, id);
+    } catch {
+      // A tool we can't read is replaced below.
+    }
+  }
+  const toolIds = [];
+  for (const t of TOOLS) {
+    const id = byName.get(t.name);
+    if (id) {
+      await api(`/v1/convai/tools/${id}`, { method: "PATCH", body: JSON.stringify(toolBody(t)) });
+      toolIds.push(id);
+      console.log(`tool ${t.name} updated`);
+    } else {
+      const created = await api("/v1/convai/tools", { method: "POST", body: JSON.stringify(toolBody(t)) });
+      toolIds.push(created.id);
+      console.log(`tool ${t.name} created -> ${created.id}`);
+    }
+  }
+  await api(`/v1/convai/agents/${existing}`, { method: "PATCH", body: JSON.stringify(agentConfig(llm, toolIds)) });
+  console.log(`Updated agent ${existing} (llm ${llm}, voice ${VOICE_ID}, ${toolIds.length} tools, skip_turn on).`);
 } else if (existing) {
   console.log(`ELEVENLABS_AGENT_ID is already set (${existing}). Pass --update to change its prompt, model, or voice.`);
 } else {
   const toolIds = [];
   for (const t of TOOLS) {
-    const created = await api("/v1/convai/tools", {
-      method: "POST",
-      body: JSON.stringify({
-        tool_config: { type: "client", name: t.name, description: t.description, expects_response: true, response_timeout_secs: 30, parameters: t.parameters },
-      }),
-    });
+    const created = await api("/v1/convai/tools", { method: "POST", body: JSON.stringify(toolBody(t)) });
     toolIds.push(created.id);
     console.log(`tool ${t.name} -> ${created.id}`);
   }

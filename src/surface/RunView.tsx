@@ -43,6 +43,13 @@ export function RunView({ initial }: { initial: AgentRun }) {
     return () => clearInterval(t);
   }, [run.id, live]);
 
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setExpanded(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [expanded]);
+
   async function resume() {
     setContinuing(true);
     const res = await fetch(`/api/runs/${run.id}/continue`, { method: "POST" });
@@ -168,13 +175,17 @@ export function RunView({ initial }: { initial: AgentRun }) {
               </div>
               <RotateCw className="h-4 w-4 text-neutral-400" aria-hidden="true" />
             </div>
+            {/* The same frame element in both modes, so the live view never reconnects when you expand it. */}
+            <div
+              className={clsx(
+                expanded ? "fixed inset-x-3 bottom-3 top-16 z-[61] overflow-hidden rounded-xl bg-white" : "relative aspect-[16/10] w-full",
+              )}
+            >
+              <BrowserFrame run={run} live={live} className="block h-full w-full" />
+            </div>
             {expanded ? (
-              <div className="flex aspect-[16/10] w-full items-center justify-center text-[15px] text-muted">
-                Open in full screen.
-              </div>
-            ) : (
-              <BrowserFrame run={run} live={live} className="block aspect-[16/10] w-full" />
-            )}
+              <div className="flex aspect-[16/10] w-full items-center justify-center text-[15px] text-muted">Showing full screen.</div>
+            ) : null}
           </div>
         </section>
       </div>
@@ -184,10 +195,9 @@ export function RunView({ initial }: { initial: AgentRun }) {
           role="dialog"
           aria-modal="true"
           aria-label={`Live browser for ${run.service_name}`}
-          className="fixed inset-0 z-50 flex flex-col bg-black"
-          onKeyDown={(e) => e.key === "Escape" && setExpanded(false)}
+          className="fixed inset-0 z-[60] bg-black"
         >
-          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-white">
+          <div className="flex h-16 flex-wrap items-center justify-between gap-3 px-5 text-white">
             <div className="flex min-w-0 items-center gap-3">
               <span className="font-semibold">{title}</span>
               <span className="truncate text-sm text-neutral-300">
@@ -210,9 +220,6 @@ export function RunView({ initial }: { initial: AgentRun }) {
               </button>
             </div>
           </div>
-          <div className="min-h-0 flex-1 px-3 pb-3">
-            <BrowserFrame run={run} live={live} className="block h-full w-full rounded-lg bg-white" />
-          </div>
         </div>
       ) : null}
     </div>
@@ -232,20 +239,59 @@ function ContinueButton({ busy, onClick }: { busy: boolean; onClick: () => void 
   );
 }
 
+function withReadOnly(url: string, readOnly: boolean): string {
+  return readOnly ? url + (url.includes("?") ? "&" : "?") + "readOnly=true" : url;
+}
+
+// The Kernel live view. Its src never changes after mount; view-only vs interactive is switched with the
+// KERNEL_SET_READ_ONLY message (kernel.sh/docs browsers/live-view). Older browser images don't support the message,
+// so if it isn't acknowledged the frame reloads once with the right setting.
+function LiveFrame({ url, readOnly, title, className }: { url: string; readOnly: boolean; title: string; className: string }) {
+  const ref = useRef<HTMLIFrameElement>(null);
+  const [initialReadOnly] = useState(readOnly);
+  const [fallbackSrc, setFallbackSrc] = useState<string | null>(null);
+  const applied = useRef(readOnly);
+
+  useEffect(() => {
+    if (readOnly === applied.current) return;
+    const origin = new URL(url).origin;
+    let acked = false;
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin === origin && e.data?.type === "KERNEL_READ_ONLY_CHANGED") acked = true;
+    };
+    window.addEventListener("message", onMessage);
+    ref.current?.contentWindow?.postMessage({ type: "KERNEL_SET_READ_ONLY", readOnly, requestId: String(Date.now()) }, origin);
+    const t = setTimeout(() => {
+      if (!acked) setFallbackSrc(withReadOnly(url, readOnly));
+      applied.current = readOnly;
+    }, 2500);
+    return () => {
+      window.removeEventListener("message", onMessage);
+      clearTimeout(t);
+    };
+  }, [readOnly, url]);
+
+  return (
+    <iframe
+      ref={ref}
+      title={title}
+      src={fallbackSrc ?? withReadOnly(url, initialReadOnly)}
+      className={clsx(className, "bg-white")}
+      allow="clipboard-read; clipboard-write"
+    />
+  );
+}
+
 function BrowserFrame({ run, live, className }: { run: AgentRun; live: boolean; className: string }) {
   if (live && run.live_view_url) {
     // View-only while the agent drives. Interactive while paused, so the user can sign in or enter a card.
-    const src =
-      run.status === "paused"
-        ? run.live_view_url
-        : run.live_view_url + (run.live_view_url.includes("?") ? "&" : "?") + "readOnly=true";
     return (
-      <iframe
-        key={src}
+      <LiveFrame
+        key={run.live_view_url}
+        url={run.live_view_url}
+        readOnly={run.status !== "paused"}
         title={`Live browser for ${run.service_name}`}
-        src={src}
-        className={clsx(className, "bg-white")}
-        allow="clipboard-read; clipboard-write"
+        className={className}
       />
     );
   }

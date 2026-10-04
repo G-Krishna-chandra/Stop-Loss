@@ -166,6 +166,27 @@ async function fromEmail(name: string, emailText: string): Promise<Partial> {
   };
 }
 
+// Finds a product's official website from its name ("ChatGPT" -> https://chatgpt.com). Exa search with no contents:
+// only the result URLs are needed (build-with-exa: metadata-only results when content isn't used).
+export async function findOfficialSite(product: string): Promise<{ name: string; url: string } | null> {
+  if (!process.env.EXA_API_KEY) return null;
+  const exa = new Exa(process.env.EXA_API_KEY);
+  const res = await exa.search(`${product} official website`, { type: "auto", numResults: 5 });
+  const token = product.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const hosts = res.results
+    .map((r) => {
+      try {
+        return new URL(r.url);
+      } catch {
+        return null;
+      }
+    })
+    .filter((u): u is URL => u !== null);
+  // Prefer a host that contains the product's name; otherwise trust the top result.
+  const best = hosts.find((u) => u.hostname.replace(/^www\./, "").replace(/[^a-z0-9]/g, "").includes(token)) ?? hosts[0];
+  return best ? { name: product, url: `${best.protocol}//${best.hostname}` } : null;
+}
+
 // Exa only: what a new customer would get. Used before an agent sign-up, when there is no email yet.
 export async function lookupWebTerms(service_name: string, service_domain: string): Promise<Terms> {
   return lookupTerms({ service_name, service_domain });
