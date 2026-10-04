@@ -158,14 +158,20 @@ export async function runBrowserAgent(input: {
     use_email_login: tool({
       description:
         "After you asked the site to email a sign-in code, magic link, or verification link to the StopLoss address, " +
-        "wait for that email and use it. Pass the code field's number if the page asks for a code. You never see the code.",
+        "wait for that email and use it. Pass the code field's number if the page asks for a code (the first box when the code is split " +
+        "into one box per digit). You never see the code.",
       inputSchema: z.object({ code_field_id: z.number().int().optional() }),
       execute: async ({ code_field_id }) => {
         for (let i = 0; i < 18; i++) {
           const found = await hooks.emailLogin(startedAt);
           if (found.code && code_field_id != null) {
-            await run(sessionId, `await ${el(code_field_id)}.fill(${JSON.stringify(found.code)}, { timeout: 10000 });`);
-            return "Code entered from the StopLoss inbox.";
+            // Typed rather than filled, so split one-digit-per-box fields advance as a person's typing would.
+            await run(
+              sessionId,
+              `const f = ${el(code_field_id)}; await f.click({ timeout: 10000 }); await f.fill(''); ` +
+                `await page.keyboard.type(${JSON.stringify(found.code)}, { delay: 90 }); ${settle}`,
+            );
+            return "Code entered from the StopLoss inbox.\n\n" + (await look());
           }
           if (found.link) {
             await run(sessionId, `await page.goto(${JSON.stringify(found.link)}, { waitUntil: 'domcontentloaded', timeout: 45000 }); ${settle}`, 60);

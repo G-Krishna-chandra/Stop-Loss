@@ -153,6 +153,8 @@ function agentConfig(llm, toolIds) {
       tts: { voice_id: VOICE_ID, speed: 1.1, expressive_mode: false, optimize_streaming_latency: 1, stability: 0.6 },
       // Normal eagerness so replies come quickly after the user stops talking; skip_turn keeps it quiet in long silences.
       turn: { turn_timeout: 30, silence_end_call_timeout: -1, turn_eagerness: "normal" },
+      // Ignore nearby voices that aren't the user (phantom turns like "Hello." in a noisy room).
+      vad: { background_voice_detection: true },
       conversation: { max_duration_seconds: 1800 },
     },
     platform_settings: { auth: { enable_auth: true } },
@@ -164,7 +166,9 @@ const existing = process.env.ELEVENLABS_AGENT_ID;
 const update = process.argv.includes("--update");
 
 const toolBody = (t) => ({
-  tool_config: { type: "client", name: t.name, description: t.description, expects_response: true, response_timeout_secs: 60, parameters: t.parameters },
+  tool_config: { type: "client", name: t.name, description: t.description, expects_response: true, response_timeout_secs: 60, parameters: t.parameters,
+    // Background noise transcribed as speech was abandoning lookups midway, so tools always run to completion.
+    disable_interruptions: true },
 });
 
 if (existing && update) {

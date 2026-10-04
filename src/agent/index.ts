@@ -19,7 +19,7 @@ import {
   updateRun,
   advanceRun,
 } from "@/db";
-import { classify, ensureInbox, getMessage, listInbox, parseSender, registrableDomain, serviceName, stopLossAddress } from "@/inbox";
+import { classify, ensureInbox, getMessage, htmlToText, listInbox, parseSender, registrableDomain, serviceName, stopLossAddress } from "@/inbox";
 import { lookupTerms, lookupWebTerms } from "@/terms";
 import type { AgentRun, ApprovalRequest, Position, Terms } from "@/types";
 
@@ -42,6 +42,16 @@ function when(iso: string | null): string {
 // First choice: mail from the service's own domain (chat.openai.com and its mail from openai.com both reduce to
 // openai.com). Fallback: the newest login-code or verification email, since the agent just asked for one.
 // The code goes straight into the browser; it is never stored or shown to the model.
+// A number right after the word "code" wins over any other long number in the email.
+function findCode(text: string): string | null {
+  return (
+    text.match(/\bcode\b[^\d]{0,120}?\b(\d{4,8})\b/i)?.[1] ??
+    text.match(/\b(\d{6,8})\b/)?.[1] ??
+    text.match(/\bcode[:\s]+([A-Z0-9]{5,10})\b/i)?.[1] ??
+    null
+  );
+}
+
 function emailLoginFor(domain: string) {
   const site = registrableDomain(domain);
   return async (since: Date): Promise<{ code: string | null; link: string | null }> => {
@@ -51,8 +61,8 @@ function emailLoginFor(domain: string) {
     for (const item of [...fromSite, ...codeLike]) {
       const m = await getMessage(item.message_id);
       const senderSite = parseSender(m.from).domain;
-      const body = `${m.subject}\n${m.text}`;
-      const code = body.match(/\b(\d{6,8})\b/)?.[1] ?? body.match(/\bcode[:\s]+([A-Z0-9]{5,10})\b/i)?.[1] ?? null;
+      // Read the HTML too: some senders (Semrush) put a "cannot be displayed" placeholder in the text part.
+      const code = findCode(`${m.subject}\n${m.text}\n${m.html ? htmlToText(m.html) : ""}`);
       const links = [...(m.html ?? m.text).matchAll(/https?:\/\/[^\s"'<>)]+/g)].map((x) => x[0]);
       const link =
         links.find((l) => {

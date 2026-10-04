@@ -1,5 +1,5 @@
 // AgentMail: the StopLoss address, reading mail, and classifying what arrives (skill section 6).
-export { ensureInbox, getMessage, listInbox, stopLossAddress } from "./agentmail";
+export { ensureInbox, getMessage, htmlToText, listInbox, stopLossAddress } from "./agentmail";
 export type { FullMessage, InboxListItem } from "./agentmail";
 export { classify, parseSender, registrableDomain, serviceName } from "./classify";
 export type { Sender } from "./classify";
