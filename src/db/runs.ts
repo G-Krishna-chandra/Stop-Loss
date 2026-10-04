@@ -48,6 +48,25 @@ export async function latestRunFor(positionId: string, kind?: RunKind): Promise<
   return rows[0] ? toRun(rows[0]) : null;
 }
 
+// Vercel stops a function after maxDuration (300 s), which can cut an agent run off mid-task. A run still marked
+// running 320 s after its attempt began is paused when its Kernel browser exists (Continue resumes it there),
+// and failed when it never got a browser.
+export async function pauseStaleRuns(): Promise<void> {
+  await sql()`
+    update agent_runs set
+      status = case when browser_session_id is null then 'failed' else 'paused' end,
+      error = case when browser_session_id is null
+        then 'This run hit the 5-minute limit before the browser started.'
+        else 'This run hit the 5-minute limit. The browser is still open where it stopped.' end,
+      finished_at = case when browser_session_id is null then now() else null end
+    where status = 'running' and invoked_at < now() - interval '320 seconds'`;
+}
+
+export async function listRuns(limit = 100): Promise<AgentRun[]> {
+  const rows = await sql()`select * from agent_runs order by started_at desc limit ${limit}`;
+  return rows.map(toRun);
+}
+
 export async function listActiveRuns(): Promise<AgentRun[]> {
   const rows = await sql()`select * from agent_runs where status in ('running', 'paused') order by started_at desc`;
   return rows.map(toRun);
