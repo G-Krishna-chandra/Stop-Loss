@@ -18,7 +18,7 @@ import {
   updateRun,
   advanceRun,
 } from "@/db";
-import { classify, ensureInbox, getMessage, listInbox, parseSender, serviceName, stopLossAddress } from "@/inbox";
+import { classify, ensureInbox, getMessage, listInbox, parseSender, registrableDomain, serviceName, stopLossAddress } from "@/inbox";
 import { lookupTerms } from "@/terms";
 import type { AgentRun, ApprovalRequest, Position } from "@/types";
 
@@ -37,21 +37,28 @@ function when(iso: string | null): string {
   }).format(new Date(iso));
 }
 
-// Reads the newest login code or sign-in link sent to the StopLoss address by `domain` since `since`.
+// Reads the newest login code or sign-in link sent to the StopLoss address since `since`.
+// First choice: mail from the service's own domain (chat.openai.com and its mail from openai.com both reduce to
+// openai.com). Fallback: the newest login-code or verification email, since the agent just asked for one.
 // The code goes straight into the browser; it is never stored or shown to the model.
 function emailLoginFor(domain: string) {
+  const site = registrableDomain(domain);
   return async (since: Date): Promise<{ code: string | null; link: string | null }> => {
-    const items = await listInbox(15);
-    for (const item of items) {
-      if (new Date(item.received_at) < since) continue;
-      if (parseSender(item.from).domain !== domain) continue;
+    const recent = (await listInbox(15)).filter((item) => new Date(item.received_at) >= since);
+    const fromSite = recent.filter((item) => parseSender(item.from).domain === site);
+    const codeLike = recent.filter((item) => ["login_code", "account_setup"].includes(classify(item.subject, item.preview)));
+    for (const item of [...fromSite, ...codeLike]) {
       const m = await getMessage(item.message_id);
+      const senderSite = parseSender(m.from).domain;
       const body = `${m.subject}\n${m.text}`;
       const code = body.match(/\b(\d{6,8})\b/)?.[1] ?? body.match(/\bcode[:\s]+([A-Z0-9]{5,10})\b/i)?.[1] ?? null;
       const links = [...(m.html ?? m.text).matchAll(/https?:\/\/[^\s"'<>)]+/g)].map((x) => x[0]);
       const link =
-        links.find((l) => /(verify|confirm|magic|login|log-in|signin|sign-in|auth|token)/i.test(l) && new URL(l).hostname.endsWith(domain)) ??
-        null;
+        links.find((l) => {
+          if (!/(verify|confirm|magic|login|log-in|signin|sign-in|auth|token)/i.test(l)) return false;
+          const host = registrableDomain(new URL(l).hostname);
+          return host === site || host === senderSite;
+        }) ?? null;
       if (code || link) return { code, link };
     }
     return { code: null, link: null };

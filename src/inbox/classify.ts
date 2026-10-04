@@ -5,16 +5,19 @@ export type Sender = { name: string | null; address: string; domain: string };
 
 const MULTI_PART_TLDS = new Set(["co.uk", "com.au", "co.jp", "co.in", "com.br", "co.nz"]);
 
+// "mail.cursor.com" -> "cursor.com", "app.example.co.uk" -> "example.co.uk"
+export function registrableDomain(host: string): string {
+  const parts = host.toLowerCase().replace(/^www\./, "").split(".");
+  const lastTwo = parts.slice(-2).join(".");
+  return MULTI_PART_TLDS.has(lastTwo) ? parts.slice(-3).join(".") : lastTwo;
+}
+
 // "Cursor <hi@mail.cursor.com>" -> { name: "Cursor", address: "hi@mail.cursor.com", domain: "cursor.com" }
 export function parseSender(from: string): Sender {
   const match = from.match(/^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/);
   const address = (match ? match[2] : from).trim().toLowerCase();
   const name = match && match[1].trim() ? match[1].trim() : null;
-  const host = address.split("@")[1] ?? "";
-  const parts = host.split(".");
-  const lastTwo = parts.slice(-2).join(".");
-  const domain = MULTI_PART_TLDS.has(lastTwo) ? parts.slice(-3).join(".") : lastTwo;
-  return { name, address, domain };
+  return { name, address, domain: registrableDomain(address.split("@")[1] ?? "") };
 }
 
 // Best guess at the product name: the sender's display name without "Team", else the domain's first label.

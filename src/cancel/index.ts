@@ -7,11 +7,13 @@ import { type Browser, closeBrowser, openBrowser } from "./kernel";
 // Reuses the browser a paused run left open (the user signed in or entered a card there), or opens a new one.
 async function browserFor(runId: string, domain: string, saveProfile: boolean, resume: boolean): Promise<Browser> {
   const run = await getRun(runId);
+  const now = new Date().toISOString();
   if (resume && run?.browser_session_id) {
+    await updateRun(runId, { status: "running", error: null, invoked_at: now });
     return { sessionId: run.browser_session_id, liveViewUrl: run.live_view_url, replayId: null };
   }
   const browser = await openBrowser(domain, { saveProfile });
-  await updateRun(runId, { live_view_url: browser.liveViewUrl, browser_session_id: browser.sessionId, status: "running", error: null });
+  await updateRun(runId, { live_view_url: browser.liveViewUrl, browser_session_id: browser.sessionId, status: "running", error: null, invoked_at: now });
   return browser;
 }
 
@@ -51,8 +53,8 @@ export async function runCancel(
   opts: { userDeclinedOffer: boolean; resume?: boolean },
 ): Promise<CancelResult> {
   const browser = await browserFor(runId, position.service_domain, false, Boolean(opts.resume));
-  if (opts.resume) await updateRun(runId, { status: "running", error: null });
-  else await advanceRun(runId, "open_account");
+  if (!opts.resume) await advanceRun(runId, "open_account");
+  const since = new Date((await getRun(runId))?.started_at ?? Date.now());
 
   const startUrl = position.cancel_url ?? `https://${position.service_domain}`;
   const instructions = `You cancel a free trial subscription for the user, inside their own ${position.service_name} account.
@@ -75,9 +77,11 @@ ${SAFETY}
       startUrl,
       instructions,
       task: opts.resume
-        ? `The user finished signing in. Continue cancelling the ${position.service_name} subscription so it does not renew.`
+        ? `The previous attempt was interrupted or waited for the user. Look at the current page and continue cancelling the ${position.service_name} subscription so it does not renew.`
         : `Cancel the ${position.service_name} subscription${position.plan_name ? ` (${position.plan_name})` : ""} so it does not renew.`,
       stepKeys: ["open_account", "billing", "find_cancel", "submit", "confirm"],
+      since,
+      resume: opts.resume,
       hooks: { ...hooks, onStep: async (key, d) => void (await advanceRun(runId, key, d)) },
     });
     outcome = result.outcome;
@@ -117,8 +121,8 @@ export async function runSignup(
   opts: { resume?: boolean } = {},
 ): Promise<SignupResult> {
   const browser = await browserFor(runId, target.domain, true, Boolean(opts.resume));
-  if (opts.resume) await updateRun(runId, { status: "running", error: null });
-  else await advanceRun(runId, "research");
+  if (!opts.resume) await advanceRun(runId, "research");
+  const since = new Date((await getRun(runId))?.started_at ?? Date.now());
 
   const instructions = `You sign the user up for a free trial of ${target.name}.
 Use this email: ${target.email}. Use this full name: ${target.fullName}.
@@ -135,9 +139,11 @@ ${SAFETY}
       startUrl: target.url,
       instructions,
       task: opts.resume
-        ? `The user entered their card. Continue and confirm the ${target.name} free trial for ${target.email}.`
+        ? `The previous attempt was interrupted or waited for the user. Look at the current page and continue signing up for ${target.name} with ${target.email}.`
         : `Create a ${target.name} account with a free trial for ${target.email}.`,
       stepKeys: ["research", "create_account", "fill_form", "verify_email", "payment", "confirm_trial"],
+      since,
+      resume: opts.resume,
       hooks: { ...hooks, onStep: async (key, d) => void (await advanceRun(runId, key, d)) },
     });
   } catch (err) {

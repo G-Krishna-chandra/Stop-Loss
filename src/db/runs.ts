@@ -17,6 +17,7 @@ function toRun(r: Row): AgentRun {
     steps: (r.steps as RunStep[]) ?? [],
     error: (r.error as string | null) ?? null,
     started_at: iso(r.started_at) ?? "",
+    invoked_at: iso(r.invoked_at) ?? iso(r.started_at) ?? "",
     finished_at: iso(r.finished_at),
   };
 }
@@ -54,7 +55,7 @@ export async function listActiveRuns(): Promise<AgentRun[]> {
 
 export async function updateRun(
   id: string,
-  patch: Partial<Pick<AgentRun, "status" | "live_view_url" | "replay_url" | "browser_session_id" | "steps" | "error" | "position_id">>,
+  patch: Partial<Pick<AgentRun, "status" | "live_view_url" | "replay_url" | "browser_session_id" | "steps" | "error" | "position_id" | "invoked_at">>,
 ): Promise<AgentRun> {
   const current = await getRun(id);
   if (!current) throw new Error(`Run ${id} not found`);
@@ -69,6 +70,7 @@ export async function updateRun(
       steps = ${JSON.stringify(next.steps)}::jsonb,
       error = ${next.error},
       position_id = ${next.position_id},
+      invoked_at = ${next.invoked_at},
       finished_at = case when ${finished} then coalesce(finished_at, now()) else null end
     where id = ${id}
     returning *`;

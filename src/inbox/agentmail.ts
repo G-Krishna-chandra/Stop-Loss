@@ -52,6 +52,25 @@ export async function listInbox(limit = 50): Promise<InboxListItem[]> {
 
 export type FullMessage = InboxListItem & { to: string[]; text: string; html: string | null };
 
+// Many service emails are HTML-only (no text part), so readable text comes from the HTML when it must.
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<(style|script|head)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|tr|li|h[1-6]|table|td)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&#(\d+);/g, (_, n: string) => String.fromCharCode(Number(n)))
+    .replace(/[ \t\f\v]+/g, " ")
+    .replace(/\s*\n\s*/g, "\n")
+    .trim();
+}
+
 export async function getMessage(messageId: string): Promise<FullMessage> {
   const { inboxId } = await ensureInbox();
   const m = await agentmail().inboxes.messages.get(inboxId, messageId);
@@ -63,7 +82,7 @@ export async function getMessage(messageId: string): Promise<FullMessage> {
     subject: m.subject ?? "(no subject)",
     preview: m.preview ?? "",
     received_at: new Date(m.timestamp).toISOString(),
-    text: m.extractedText ?? m.text ?? "",
+    text: m.extractedText || m.text || (m.html ? htmlToText(m.html) : ""),
     html: m.html ?? null,
   };
 }

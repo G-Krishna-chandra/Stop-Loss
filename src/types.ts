@@ -123,6 +123,7 @@ export type AgentRun = {
   steps: RunStep[];
   error: string | null;
   started_at: string;
+  invoked_at: string;
   finished_at: string | null;
 };
 

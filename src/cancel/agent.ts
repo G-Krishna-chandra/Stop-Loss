@@ -55,12 +55,18 @@ export async function runBrowserAgent(input: {
   stepKeys: string[];
   hooks: AgentHooks;
   maxSteps?: number;
+  // Login emails older than this are ignored. A resumed run passes its original start so earlier codes still count.
+  since?: Date;
+  // Resuming keeps the browser on its current page instead of opening startUrl again.
+  resume?: boolean;
 }): Promise<{ outcome: AgentOutcome; detail: string }> {
   const { sessionId, hooks } = input;
-  const startedAt = new Date();
+  const startedAt = input.since ?? new Date();
   let finished: { outcome: AgentOutcome; detail: string } | null = null;
 
-  await run(sessionId, `await page.goto(${JSON.stringify(input.startUrl)}, { waitUntil: 'domcontentloaded', timeout: 45000 }); ${settle}`, 60);
+  if (!input.resume) {
+    await run(sessionId, `await page.goto(${JSON.stringify(input.startUrl)}, { waitUntil: 'domcontentloaded', timeout: 45000 }); ${settle}`, 60);
+  }
 
   const look = async () => render(await run<Snapshot>(sessionId, LOOK));
 
@@ -164,7 +170,9 @@ export async function runBrowserAgent(input: {
   await generateText({
     model: model("agent"),
     instructions: input.instructions,
-    prompt: `${input.task}\n\nThe browser is open at ${input.startUrl}. Start with look.`,
+    prompt: input.resume
+      ? `${input.task}\n\nThe browser is still open where the last attempt stopped. Start with look.`
+      : `${input.task}\n\nThe browser is open at ${input.startUrl}. Start with look.`,
     tools,
     stopWhen: [isStepCount(input.maxSteps ?? 45), () => finished !== null],
   });

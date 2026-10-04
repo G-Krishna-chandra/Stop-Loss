@@ -73,6 +73,9 @@ create table if not exists agent_runs (
   started_at timestamptz not null default now(),
   finished_at timestamptz
 );
+-- When the current attempt began. A Vercel function stops after maxDuration, so a run still "running" long after
+-- this is treated as interrupted and paused for the user to continue.
+alter table agent_runs add column if not exists invoked_at timestamptz not null default now();
 
 -- Our record of each AgentMail message: how it was classified and what StopLoss did with it.
 -- Bodies stay in AgentMail and are fetched on demand.
